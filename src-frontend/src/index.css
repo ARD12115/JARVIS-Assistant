@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-jarvis-border;
+  }
+  
+  body {
+    @apply bg-jarvis-bg text-jarvis-text font-sans antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+  
+  ::selection {
+    @apply bg-jarvis-primary/30 text-jarvis-text;
+  }
+  
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-jarvis-bg;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-jarvis-border rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-jarvis-textMuted;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-jarvis-primary/50 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-primary {
+    @apply btn bg-jarvis-primary text-jarvis-bg hover:bg-jarvis-primaryHover;
+  }
+  
+  .btn-secondary {
+    @apply btn bg-jarvis-surface hover:bg-jarvis-surfaceHover text-jarvis-text border border-jarvis-border;
+  }
+  
+  .btn-ghost {
+    @apply btn bg-transparent hover:bg-jarvis-surfaceHover text-jarvis-textMuted hover:text-jarvis-text;
+  }
+  
+  .input {
+    @apply w-full px-4 py-2.5 bg-jarvis-surface border border-jarvis-border rounded-lg text-jarvis-text placeholder-jarvis-textMuted focus:outline-none focus:ring-2 focus:ring-jarvis-primary/50 focus:border-transparent transition-all duration-200;
+  }
+  
+  .card {
+    @apply bg-jarvis-surface border border-jarvis-border rounded-xl p-6;
+  }
+  
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-jarvis-textMuted hover:text-jarvis-text hover:bg-jarvis-surfaceHover transition-colors cursor-pointer;
+  }
+  
+  .sidebar-item-active {
+    @apply text-jarvis-primary bg-jarvis-primary/10;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .animate-in {
+    animation: fadeIn 0.2s ease-out, slideUp 0.3s ease-out;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

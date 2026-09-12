@@ -1,0 +1,127 @@
+# JARVIS Assistant - Git Ignore
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+uv.lock
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+*.local
+.env
+.env.*
+!.env.example
+.vite/
+*.tsbuildinfo
+
+# Tauri / Rust
+target/
+Cargo.lock
+**/target/
+
+# Tauri Build Output
+src-tauri/target/
+src-tauri/src-tauri/target/
+*.dmg
+*.app
+*.deb
+*.rpm
+*.msi
+*.exe
+*.AppImage
+*.snap
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+jarvis.db
+
+# Test Coverage
+coverage/
+.nyc_output/
+
+# OS
+.DS_Store
+ehthumbs.db
+Desktop.ini
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Model Files (large, not for git)
+*.gguf
+*.bin
+*.safetensors
+models/
+
+# Audio/Voice Cache
+voice_cache/
+*.mp3
+*.wav
+*.ogg
+
+# Progress Logs (generated)
+docs/progress/*.md
+!docs/progress/README.md
+
+# Hermes Local Data
+~/.hermes/
+AppData/Local/hermes/
