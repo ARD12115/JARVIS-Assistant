@@ -1,9 +1,24 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { Mic, MicOff, Send, Paperclip, Smile, ArrowUpRight, RotateCcw, X } from 'lucide-react'
+import { Mic, MicOff, Paperclip, Smile, ArrowUpRight, RotateCcw } from 'lucide-react'
 import { useChatStore } from '../store/chatStore'
 
 export function InputBar({ disabled }: { disabled: boolean }) {
-  const { sendMessage, isRecording, startVoiceInput, stopVoiceInput } = useChatStore()
+  const { 
+    sendMessage, 
+    isRecording: isRecordingStore, 
+    startVoiceInput: startVoiceInputStore, 
+    stopVoiceInput: stopVoiceInputStore 
+  } = useChatStore()
+  
+  const [isRecording, setIsRecording] = useState(isRecordingStore)
+  const [startVoiceInput] = useState(startVoiceInputStore)
+  const [stopVoiceInput] = useState(stopVoiceInputStore)
+  
+  // Sync with store
+  useEffect(() => {
+    setIsRecording(isRecordingStore)
+  }, [isRecordingStore])
+
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [value, setValue] = useState('')
   const [height, setHeight] = useState(48)
@@ -65,6 +80,8 @@ export function InputBar({ disabled }: { disabled: boolean }) {
 
   const isEmpty = !value.trim()
 
+  const { sendMessage, isRecording: _isRecording, startVoiceInput: _startVoiceInput, stopVoiceInput: _stopVoiceInput } = useChatStore()
+
   return (
     <form onSubmit={handleSubmit} className="input-area relative">
       {/* Attach Menu Dropdown */}
@@ -80,7 +97,7 @@ export function InputBar({ disabled }: { disabled: boolean }) {
                 { icon: Paperclip, label: 'File', action: () => handleAttachClick('file') },
                 { icon: Smile, label: 'Emoji', action: () => handleAttachClick('emoji') },
                 { icon: RotateCcw, label: 'Code', action: () => handleAttachClick('code') },
-              ].map((item, i) => (
+              ].map((item) => (
                 <button
                   key={item.label}
                   onClick={item.action}

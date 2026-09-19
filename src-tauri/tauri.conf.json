@@ -10,6 +10,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "JARVIS Assistant",
         "width": 1200,
         "height": 800,
@@ -35,6 +36,9 @@
     "fs": { "requireLiteralLeadingDot": false },
     "dialog": null,
     "clipboardManager": null,
-    "globalShortcut": null
+    "globalShortcut": null,
+    "http": {
+      "scope": ["http://127.0.0.1:8765/**"]
+    }
   }
 }

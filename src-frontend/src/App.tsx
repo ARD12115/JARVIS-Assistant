@@ -11,8 +11,8 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showWelcome, setShowWelcome] = useState(true)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
-  const sidebarRef = useRef<HTMLAsideElement>(null)
-  const { sessions, currentSessionId, loadSessions, setCurrentSession, createSession } = useChatStore()
+  const sidebarRef = useRef<HTMLDivElement>(null)
+  const { sessions, currentSessionId, loadSessions, setCurrentSession } = useChatStore()
 
   // Check if running in Tauri
   useEffect(() => {
