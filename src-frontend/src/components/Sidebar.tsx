@@ -87,7 +87,7 @@ export function Sidebar({ sessions, currentSessionId, onSessionSelect, onNewChat
                 )}
               </button>
             )
-          )}
+          })}
         </div>
 
         {!collapsed && (
@@ -106,3 +106,4 @@ export function Sidebar({ sessions, currentSessionId, onSessionSelect, onNewChat
     </div>
   )
 }
+)
