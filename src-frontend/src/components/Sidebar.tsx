@@ -21,12 +21,15 @@ export function Sidebar({ sessions, currentSessionId, onSessionSelect, onNewChat
     return matchesSearch
   })
 
+  const newChatButtonClass = `btn-primary w-full justify-center gap-3 ${collapsed ? 'px-3' : ''} group`
+  const newChatButtonDivClass = `p-3 ${collapsed ? 'px-2' : ''}`
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-      <div className={"p-3 " + (collapsed ? "px-2" : "")}>
+      <div className={newChatButtonDivClass}>
         <button
           onClick={onNewChat}
-          className={"btn-primary w-full justify-center gap-3 " + (collapsed ? "px-3" : "") + " group"}
+          className={newChatButtonClass}
           aria-label="New chat"
         >
           <Plus className="w-5 h-5" />
@@ -63,19 +66,23 @@ export function Sidebar({ sessions, currentSessionId, onSessionSelect, onNewChat
         ) : (
           filteredSessions.map((session) => {
             const isActive = session.session_id === currentSessionId
+            const sessionItemClass = `session-item ${isActive ? 'session-item-active' : ''} ${collapsed ? 'justify-center px-2' : ''} relative group`
+            const messageSquareClass = `w-5 h-5 flex-shrink-0 ${isActive ? 'text-jarvis-primary' : 'text-jarvis-textMuted'} group-hover:text-jarvis-primary transition-colors`
+            const title = collapsed ? `${session.preview} (${formatTime(session.started_at)})` : ''
+
             return (
               <button
                 key={session.session_id}
                 onClick={() => onSessionSelect(session.session_id)}
-                className={"session-item " + (isActive ? "session-item-active" : "") + " " + (collapsed ? "justify-center px-2" : "") + " relative group"}
+                className={sessionItemClass}
                 aria-current={isActive}
-                title={collapsed ? session.preview + " (" + formatTime(session.started_at) + ")" : ""}
+                title={title}
               >
-                <MessageSquare className={"w-5 h-5 flex-shrink-0 " + (isActive ? "text-jarvis-primary" : "text-jarvis-textMuted") + " group-hover:text-jarvis-primary transition-colors"} />
+                <MessageSquare className={messageSquareClass} />
                 {!collapsed && (
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate group-hover:text-jarvis-text transition-colors">
-                      {session.preview || "New conversation"}
+                      {session.preview || 'New conversation'}
                     </p>
                     <div className="flex items-center gap-2 text-xs text-jarvis-textMuted mt-0.5">
                       <Clock className="w-3 h-3" />

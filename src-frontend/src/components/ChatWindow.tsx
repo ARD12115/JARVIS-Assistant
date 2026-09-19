@@ -75,7 +75,7 @@ export function ChatWindow({
                 { icon: Brain, title: 'Tools', desc: 'Web search, files, code, weather' },
                 { icon: Zap, title: 'Voice I/O', desc: 'Push-to-talk STT + TTS' },
               ].map((feature, i) => (
-                <div key={feature.title} className={"stagger-" + (i + 1) + " p-4 rounded-xl bg-jarvis-surface/50 border border-jarvis-border/50 hover:border-jarvis-primary/30 transition-all duration-300 group"}>
+                <div key={feature.title} className={`stagger-${i + 1} p-4 rounded-xl bg-jarvis-surface/50 border border-jarvis-border/50 hover:border-jarvis-primary/30 transition-all duration-300 group`}>
                   <div className="w-10 h-10 rounded-xl bg-jarvis-primary/10 flex items-center justify-center mb-3 group-hover:bg-jarvis-primary/20 transition-colors">
                     <feature.icon className="w-5 h-5 text-jarvis-primary group-hover:text-jarvis-primaryHover transition-colors" />
                   </div>
