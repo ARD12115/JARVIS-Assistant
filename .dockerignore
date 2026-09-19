@@ -1,0 +1,125 @@
+# JARVIS Assistant - Docker Ignore
+
+# Git & Version Control
+.git
+.gitignore
+.gitattributes
+
+# Python
+.venv
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.coverage
+.mypy_cache/
+.ruff_cache/
+.venv/
+uv.lock
+pip-wheel-metadata/
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+*.local
+.env
+.env.*
+!.env.example
+.vite/
+*.tsbuildinfo
+
+# Tauri / Rust
+target/
+Cargo.lock
+src-tauri/target/
+src-tauri/**/target/
+
+# Tauri Build Output
+*.dmg
+*.app
+*.deb
+*.rpm
+*.msi
+*.exe
+*.AppImage
+*.snap
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.vscode/settings.json
+.vscode/launch.json
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+jarvis.db
+jarvis.db-*
+
+# Test Coverage
+coverage/
+.nyc_output/
+
+# OS
+.DS_Store
+ehthumbs.db
+Desktop.ini
+Thumbs.db
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Model Files (large, not for docker)
+*.gguf
+*.bin
+*.safetensors
+models/
+
+# Audio/Voice Cache
+voice_cache/
+*.mp3
+*.wav
+*.ogg
+
+# Progress Logs (generated)
+docs/progress/*.md
+!docs/progress/README.md
+
+# Hermes Local Data
+~/.hermes/
+AppData/Local/hermes/
+
+# Documentation (not needed in container)
+docs/
+README.md
+README_SHORT.md
+FOLDER_STRUCTURE.md
+requirements.txt
+save.md
+
+# Scripts (not needed in container)
+scripts/

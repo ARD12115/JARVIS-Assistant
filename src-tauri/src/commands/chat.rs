@@ -1,5 +1,6 @@
-use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, State};
+﻿use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter};
+use futures_util::StreamExt;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ChatRequest {
@@ -41,7 +42,6 @@ pub async fn send_message(
         .map_err(|e| e.to_string())?;
 
     let mut stream = resp.bytes_stream();
-    use futures_util::StreamExt;
 
     while let Some(chunk_result) = stream.next().await {
         match chunk_result {
@@ -79,7 +79,7 @@ pub async fn create_session() -> Result<String, String> {
         .send()
         .await
         .map_err(|e| e.to_string())?;
-    
+
     let data: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
     Ok(data["session_id"].as_str().unwrap_or("").to_string())
 }
@@ -92,7 +92,7 @@ pub async fn list_sessions() -> Result<Vec<SessionInfo>, String> {
         .send()
         .await
         .map_err(|e| e.to_string())?;
-    
+
     let sessions = resp.json().await.map_err(|e| e.to_string())?;
     Ok(sessions)
 }
@@ -105,7 +105,7 @@ pub async fn get_history(session_id: String) -> Result<Vec<HistoryMessage>, Stri
         .send()
         .await
         .map_err(|e| e.to_string())?;
-    
+
     let history = resp.json().await.map_err(|e| e.to_string())?;
     Ok(history)
 }
@@ -119,7 +119,7 @@ pub async fn load_session(session_id: String) -> Result<bool, String> {
         .send()
         .await
         .map_err(|e| e.to_string())?;
-    
+
     Ok(resp.status().is_success())
 }
 

@@ -1,12 +1,12 @@
-mod commands;
+﻿mod commands;
 mod python_sidecar;
 
-use commands::{chat, memory, tools, voice};
-use python_sidecar::PythonSidecar;
+use std::sync::Arc;
 use tauri::Manager;
+use python_sidecar::PythonSidecar;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
+fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
@@ -14,59 +14,31 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .plugin(tauri_plugin_global_shortcut::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            // Initialize Python sidecar
-            let python_sidecar = PythonSidecar::new(app.handle())?;
-            
-            // Start Python backend
-            let handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                if let Err(e) = python_sidecar.start().await {
-                    eprintln!("Failed to start Python backend: {}", e);
-                } else {
-                    println!("Python backend started successfully");
-                }
-            });
-
-            // Store sidecar for cleanup
-            app.manage(python_sidecar);
-
+            let sidecar = Arc::new(PythonSidecar::new(app.handle())?);
+            tauri::async_runtime::block_on(sidecar.start())?;
+            app.manage(sidecar);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            // Chat commands
-            chat::send_message,
-            chat::create_session,
-            chat::list_sessions,
-            chat::get_history,
-            chat::load_session,
-            // Voice commands
-            voice::voice_stt,
-            voice::voice_tts,
-            voice::list_voices,
-            // Tool commands
-            tools::list_tools,
-            tools::execute_tool,
-            // Memory commands
-            memory::list_sessions,
-            memory::get_history,
-            memory::load_session,
-            memory::new_session,
-            memory::search_memory,
+            commands::chat::send_message,
+            commands::chat::create_session,
+            commands::chat::list_sessions,
+            commands::chat::get_history,
+            commands::chat::load_session,
+            commands::voice::voice_stt,
+            commands::voice::voice_tts,
+            commands::voice::list_voices,
+            commands::tools::list_tools,
+            commands::tools::execute_tool,
+            commands::memory::memory_list_sessions,
+            commands::memory::memory_get_history,
+            commands::memory::memory_load_session,
+            commands::memory::memory_new_session,
+            commands::memory::memory_search_memory,
         ])
-        .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                // Clean up Python sidecar on close
-                let sidecar: tauri::State<PythonSidecar> = window.state();
-                tauri::async_runtime::block_on(async {
-                    if let Err(e) = sidecar.stop().await {
-                        eprintln!("Failed to stop Python backend: {}", e);
-                    }
-                });
-            }
-        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

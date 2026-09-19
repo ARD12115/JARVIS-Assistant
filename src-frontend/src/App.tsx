@@ -3,12 +3,11 @@ import { invoke } from '@tauri-apps/api/core'
 import { ChatWindow } from './components/ChatWindow'
 import { Sidebar } from './components/Sidebar'
 import { useChatStore } from './store/chatStore'
-import { Message } from './types'
 
 function App() {
   const [isTauri, setIsTauri] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const { sessions, currentSessionId, loadSessions, setCurrentSession, createSession } = useChatStore()
+  const { sessions, currentSessionId, loadSessions, setCurrentSession } = useChatStore()
 
   useEffect(() => {
     // Check if running in Tauri

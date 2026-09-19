@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, State};
+﻿use serde::{Deserialize, Serialize};
+
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ToolExecuteRequest {
@@ -15,7 +15,7 @@ pub async fn list_tools() -> Result<Vec<ToolInfo>, String> {
         .send()
         .await
         .map_err(|e| e.to_string())?;
-    
+
     let tools = resp.json().await.map_err(|e| e.to_string())?;
     Ok(tools)
 }
@@ -29,7 +29,7 @@ pub async fn execute_tool(request: ToolExecuteRequest) -> Result<ToolResult, Str
         .send()
         .await
         .map_err(|e| e.to_string())?;
-    
+
     let result = resp.json().await.map_err(|e| e.to_string())?;
     Ok(result)
 }
@@ -48,3 +48,4 @@ pub struct ToolResult {
     pub data: Option<serde_json::Value>,
     pub error: Option<String>,
 }
+

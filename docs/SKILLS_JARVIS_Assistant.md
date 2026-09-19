@@ -7,6 +7,7 @@ This document lists the best-fit Hermes skills, external tools, and libraries fo
 ## Hermes Built-in Skills (Use These First)
 
 ### Project Planning & Execution
+
 | Skill | Category | Purpose |
 |-------|----------|---------|
 | `software-development/plan` | Planning | Write detailed implementation plans to `.hermes/plans/` |
@@ -15,6 +16,7 @@ This document lists the best-fit Hermes skills, external tools, and libraries fo
 | `software-development/systematic-debugging` | Debugging | 4-phase root cause debugging |
 
 ### Autonomous Development
+
 | Skill | Category | Purpose |
 |-------|----------|---------|
 | `autonomous-ai-agents/hermes-kanban-operations` | Kanban | Run autonomous kanban with gateway dispatcher, profile isolation |
@@ -22,6 +24,7 @@ This document lists the best-fit Hermes skills, external tools, and libraries fo
 | `autonomous-ai-agents/kanban-gateway-orchestration` | Kanban | Fix kanban dispatcher using backup profile |
 
 ### Code Quality & Review
+
 | Skill | Category | Purpose |
 |-------|----------|---------|
 | `software-development/requesting-code-review` | Review | Pre-commit review: security scan, quality gates, auto-fix |
@@ -29,6 +32,7 @@ This document lists the best-fit Hermes skills, external tools, and libraries fo
 | `software-development/simplify-code` | Refactor | Parallel 4-agent cleanup of recent code changes |
 
 ### Documentation & Research
+
 | Skill | Category | Purpose |
 |-------|----------|---------|
 | `software-development/technical-documentation-overhaul` | Docs | Audit & rewrite project docs to match actual codebase |
@@ -36,6 +40,7 @@ This document lists the best-fit Hermes skills, external tools, and libraries fo
 | `research/arxiv` | Research | Search arXiv papers for ML/voice techniques |
 
 ### Productivity & Tracking
+
 | Skill | Category | Purpose |
 |-------|----------|---------|
 | `productivity/session-librarian` | Sessions | Organize sessions by prompt: find, rename, archive, prune |
@@ -46,7 +51,8 @@ This document lists the best-fit Hermes skills, external tools, and libraries fo
 
 ## External Tools & Libraries (Project Dependencies)
 
-### Python Backend (`src-python/`)
+### Python Backend (`src_python/`)
+
 ```toml
 # Core
 fastapi = "^0.115.0"
@@ -58,8 +64,8 @@ python-dotenv = "^1.0.0"
 structlog = "^24.1.0"
 
 # LLM Clients
-openai = "^1.54.0"          # For OpenRouter/RunPod (OpenAI-compatible)
-ollama = "^0.4.0"           # Official Ollama Python client
+openai = "^1.54.0"          # For OpenRouter/NVIDIA NIM (OpenAI-compatible)
+# ollama = "^0.4.0"         # REMOVED per user request
 
 # Database
 sqlalchemy = "^2.0.35"
@@ -81,7 +87,7 @@ browser-use = "^0.1.40"
 pytest = "^8.3.0"
 pytest-asyncio = "^0.24.0"
 pytest-cov = "^6.0.0"
-httpx-mock = "^0.22.0"
+httpx-mock = "^0.2.2"       # Fixed: was 0.22.0 (doesn't exist)
 
 # Dev Tools
 ruff = "^0.6.0"
@@ -90,6 +96,7 @@ pre-commit = "^3.8.0"
 ```
 
 ### Frontend (`src-frontend/`)
+
 ```json
 {
   "dependencies": {
@@ -115,11 +122,13 @@ pre-commit = "^3.8.0"
     "@testing-library/react": "^16.0.0",
     "eslint": "^9.0.0",
     "prettier": "^3.3.0"
-  }
+  },
+  "packageManager": "npm@10.x"  // Use npm, not pnpm (Windows binary issues)
 }
 ```
 
 ### Tauri/Rust (`src-tauri/`)
+
 ```toml
 # Cargo.toml
 [dependencies]
@@ -140,6 +149,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 anyhow = "1.0"
 thiserror = "1.0"
 uuid = { version = "1.0", features = ["v4", "serde"] }
+futures-util = "0.3"  # For SSE streaming
 ```
 
 ---
@@ -147,6 +157,7 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 ## Development Workflow Skills
 
 ### Daily Development Loop
+
 1. **Morning**: `hermes kanban list` → pick task → `hermes kanban claim <id>`
 2. **Plan**: Use `software-development/plan` to write task plan
 3. **Implement**: Follow TDD (`software-development/test-driven-development`)
@@ -155,6 +166,7 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 6. **Evening**: `scripts/daily_progress.py` auto-generates progress markdown
 
 ### Kanban Commands (Run in Project Root)
+
 ```bash
 # Create tasks (run once per implementation task)
 hermes kanban create "Task 1: Initialize Project Structure" \
@@ -173,6 +185,7 @@ cat ~/AppData/Local/hermes/kanban/logs/<task-id>.log
 ```
 
 ### Profile Management
+
 ```bash
 # Configure kanban failure limit on backup profile (workers run here)
 hermes config set kanban.failure_limit 20 --profile backup
@@ -194,6 +207,7 @@ cp -r ~/AppData/Local/hermes/skills/* ~/AppData/Local/hermes/profiles/backup/ski
 ---
 
 ## Recommended VS Code Extensions
+
 ```json
 {
   "recommendations": [
@@ -216,41 +230,44 @@ cp -r ~/AppData/Local/hermes/skills/* ~/AppData/Local/hermes/profiles/backup/ski
 ## Project-Specific Commands
 
 ### Start Development Environment
+
 ```bash
 # Terminal 1: Python Backend
-cd C:/Projects/JARVIS-Assistant/src-python
+cd C:/Projects/JARVIS-Assistant/src_python
 uv pip install -e .
-uv run python main.py
+PYTHONPATH="C:/Projects/JARVIS-Assistant/src_python" .venv/Scripts/python.exe main.py
 
 # Terminal 2: Frontend Dev Server
 cd C:/Projects/JARVIS-Assistant/src-frontend
-pnpm dev
+npm run dev
 
 # Terminal 3: Tauri Dev
 cd C:/Projects/JARVIS-Assistant/src-tauri
-pnpm tauri dev
+npm run tauri dev
 ```
 
 ### Run Tests
+
 ```bash
 # Python tests
-cd src-python
-uv run pytest tests/ -v --cov=src_python
+cd src_python
+uv run pytest tests/ -v --tb=short
 
 # Frontend tests
 cd src-frontend
-pnpm test
+npm test
 
 # Rust tests
-cd src-tauri/src-tauri
+cd src-tauri
 cargo test
 ```
 
 ### Build for Production
+
 ```bash
 cd C:/Projects/JARVIS-Assistant/src-tauri
-pnpm tauri build
-# Output: src-tauri/src-tauri/target/release/bundle/
+npm run tauri build
+# Output: src-tauri/target/release/bundle/
 ```
 
 ---
@@ -260,7 +277,8 @@ pnpm tauri build
 | Resource | Topic |
 |----------|-------|
 | [Tauri 2.x Guide](https://tauri.app/v2/guides/) | Desktop app development |
-| [vLLM OpenAI API](https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html) | Self-hosted LLM serving |
+| [NVIDIA NIM API](https://build.nvidia.com) | Optimized LLM inference |
+| [OpenRouter API](https://openrouter.ai/docs) | Unified LLM API |
 | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) | Fast STT |
 | [edge-tts](https://github.com/rany2/edge-tts) | Free TTS |
 | [Zustand](https://github.com/pmndrs/zustand) | React state management |
@@ -276,8 +294,21 @@ pnpm tauri build
 | Tauri 2.x + Python sidecar pattern | Custom skill or template |
 | React streaming chat components | Component library skill |
 | faster-whisper + edge-tts integration | Voice pipeline skill |
-| RunPod serverless deployment | Cloud deployment skill |
+| NVIDIA NIM deployment | Cloud deployment skill |
 | WebView2 bundling for Windows | Distribution skill |
+
+---
+
+## Key Changes from Original Plan
+
+| Original | Current |
+|----------|---------|
+| RunPod vLLM primary | NVIDIA NIM primary (cloud) |
+| Ollama local fallback | Removed (4GB VRAM insufficient) |
+| OpenRouter/Anthropic tertiary | OpenRouter fallback only |
+| pnpm for Node | npm (pnpm Windows binary issues) |
+| httpx-mock 0.22.0 | httpx-mock 0.2.2 (fixed) |
+| 8 tools (incl. code_exec) | 7 tools (code_exec flagged as security risk) |
 
 ---
 

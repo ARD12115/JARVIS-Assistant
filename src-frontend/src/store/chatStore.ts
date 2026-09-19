@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { invoke } from '@tauri-apps/api/core'
-import { Message, Session, ToolCall } from '../types'
+import { Message, Session } from '../types'
 
 interface ChatState {
   // Messages
@@ -82,9 +82,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
   
-  // Send message
+  // Send message - triggers Tauri command which emits chat-stream events
   sendMessage: async (content) => {
-    const { currentSessionId, messages, addMessage, updateMessage, setIsStreaming } = get()
+    const { currentSessionId, addMessage, updateMessage, setIsStreaming } = get()
     if (!currentSessionId || !content.trim()) return
     
     // Add user message
@@ -109,23 +109,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
     addMessage(assistantMessage)
     
     try {
-      // Invoke Tauri command for streaming
+      // Invoke Tauri command - this starts the stream and emits 'chat-stream' events
+      // The command returns after starting the stream; actual chunks come via events
       await invoke('send_message', { 
-        sessionId: currentSessionId, 
+        session_id: currentSessionId,  // snake_case to match Rust ChatRequest
         content: content.trim() 
       })
-      
-      // Note: Actual streaming will be handled via Tauri events
-      // This is a simplified version - real implementation uses event listeners
     } catch (error) {
       console.error('Failed to send message:', error)
       updateMessage(assistantId, { 
-        content: 'Failed to send message. Please try again.', 
+        content: `Failed to send message: ${error}`, 
         isStreaming: false 
       })
-    } finally {
       setIsStreaming(false)
     }
+    // Note: Streaming completion handled by chat-stream event listener in ChatWindow
+    // setIsStreaming(false) is called there when chunk.done === true
   },
   
   // Voice

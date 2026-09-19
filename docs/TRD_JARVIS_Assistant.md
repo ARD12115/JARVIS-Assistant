@@ -30,42 +30,43 @@
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
 │  │  FastAPI    │  │  LLM        │  │  Tool       │  │  Memory     │        │
 │  │  Routes     │  │  Manager    │  │  Registry   │  │  Manager    │        │
-│  │  /chat      │  │  (Multi-    │  │  (Plugins)  │  │  (SQLite)   │        │
-│  │  /voice     │  │   Backend)  │  │             │  │             │        │
-│  │  /tools     │  │             │  │             │  │             │        │
+│  │  /chat      │  │  (NVIDIA    │  │  (Plugins)  │  │  (SQLite)   │        │
+│  │  /voice     │  │   NIM +     │  │             │  │             │        │
+│  │  /tools     │  │   OpenRouter)│  │             │  │             │        │
 │  │  /memory    │  │             │  │             │  │             │        │
 │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘        │
 └─────────┼────────────────┼────────────────┼────────────────┼────────────────┘
           │                │                │                │
      ┌────┴────┬────┐ ┌────┴────┐    ┌─────┴─────┐    ┌─────┴─────┐
      ▼         ▼    ▼    ▼         ▼    ▼           ▼    ▼           ▼
-  RunPod   Ollama OpenR  Time  Weather WebSearch FileOps  SystemInfo CodeExec
-  vLLM     Local  API   Tool  Tool    Tool     Tool     Tool     Tool
+  NVIDIA   OpenR  Time  Weather WebSearch FileOps  SystemInfo CodeExec
+   NIM      API   Tool  Tool    Tool     Tool     Tool     Tool
 ```
 
 ---
 
 ### 2. Component Specifications
 
-#### 2.1 Configuration System (`src-python/config.py`)
+#### 2.1 Configuration System (`src_python/config.py`)
 
 | Parameter | Type | Default | Source | Description |
 |-----------|------|---------|--------|-------------|
-| `primary_backend` | str | "runpod" | ENV | Primary LLM backend name |
-| `runpod_endpoint` | str | "" | ENV | RunPod vLLM endpoint URL |
-| `runpod_token` | str | "" | ENV | RunPod API token |
-| `ollama_host` | str | "http://localhost:11434" | ENV | Ollama API base URL |
-| `ollama_model` | str | "llama3.1:8b" | ENV | Default Ollama model |
-| `openrouter_key` | str | "" | ENV | OpenRouter API key |
-| `anthropic_key` | str | "" | ENV | Anthropic API key |
-| `fallback_backends` | List[str] | ["ollama", "openrouter"] | Code | Fallback order |
-| `db_path` | str | "jarvis.db" | ENV | SQLite database path |
-| `log_level` | str | "INFO" | ENV | Logging level |
-| `voice_enabled` | bool | false | ENV | Enable voice I/O |
-| `api_host` | str | "127.0.0.1" | ENV | FastAPI bind address |
-| `api_port` | int | 8765 | ENV | FastAPI port |
+| `primary_backend` | str | `"nvidia_nim"` | ENV | Primary LLM backend name |
+| `nvidia_nim_api_key` | str | `""` | ENV | NVIDIA NIM API key |
+| `nvidia_nim_model` | str | `"nvidia/nemotron-3-super-120b-a12b"` | ENV | NVIDIA NIM model |
+| `nvidia_nim_base_url` | str | `"https://integrate.api.nvidia.com/v1"` | ENV | NVIDIA NIM API base URL |
+| `openrouter_key` | str | `""` | ENV | OpenRouter API key |
+| `openrouter_model` | str | `"meta-llama/llama-3.1-8b-instruct:free"` | ENV | Default OpenRouter model |
+| `fallback_backends` | List[str] | `["openrouter"]` | Code | Fallback order |
+| `db_path` | str | `"jarvis.db"` | ENV | SQLite database path |
+| `log_level` | str | `"INFO"` | ENV | Logging level |
+| `voice_enabled` | bool | `false` | ENV | Enable voice I/O |
+| `api_host` | str | `"127.0.0.1"` | ENV | FastAPI bind address |
+| `api_port` | int | `8765` | ENV | FastAPI port |
 
-#### 2.2 LLM Backend Interface (`src-python/llm/base.py`)
+**Note:** Ollama, RunPod, Anthropic backends removed per user request. Only NVIDIA NIM + OpenRouter remain.
+
+#### 2.2 LLM Backend Interface (`src_python/llm/base.py`)
 
 ```python
 @dataclass
@@ -102,7 +103,7 @@ class LLMBackend(ABC):
     def get_models(self) -> List[str]: ...
 ```
 
-#### 2.3 LLM Manager (`src-python/llm/manager.py`)
+#### 2.3 LLM Manager (`src_python/llm/manager.py`)
 
 | Method | Description |
 |--------|-------------|
@@ -113,19 +114,20 @@ class LLMBackend(ABC):
 | `get_status()` | Returns dict of all backends + health |
 
 **Health Check Strategy:**
-- RunPod: `GET /health` endpoint (5s timeout)
-- Ollama: `GET /api/tags` (5s timeout)
+- NVIDIA NIM: `GET /models` endpoint (5s timeout)
 - OpenRouter: Key presence + test request on first use
-- Cache TTL: 30 seconds
+- Cache TTL: 30 seconds (known issue: causes intermittent false negatives)
 
 **Fallback Logic:**
-1. Try primary backend if healthy
-2. Iterate fallbacks in order, skip unhealthy
+1. Try primary backend (NVIDIA NIM) if healthy
+2. Iterate fallbacks in order (OpenRouter), skip unhealthy
 3. If all unhealthy, try anyway (last resort)
 4. On failure: invalidate cache, try next
 5. After all exhausted: raise `AllBackendsFailedError`
 
-#### 2.4 Tool Registry (`src-python/tools/registry.py`)
+**Known Issue:** Health check cache TTL (30s) causes intermittent "healthy: false" for NVIDIA even though direct API calls return 200. Direct API test always works.
+
+#### 2.4 Tool Registry (`src_python/tools/registry.py`)
 
 ```python
 @dataclass
@@ -156,7 +158,9 @@ class ToolRegistry:
 | `file_list` | List directory tree | `path: str, depth?: int` | None |
 | `code_exec` | Run Python in sandbox | `code: str, timeout?: int` | `subprocess` (isolated) |
 
-#### 2.5 Session Memory (`src-python/memory/session.py`)
+**Note:** 7 tools currently (code_exec is the 8th but flagged as security risk — no sandbox).
+
+#### 2.5 Session Memory (`src_python/memory/session.py`)
 
 **Schema:**
 ```sql
@@ -191,7 +195,11 @@ class SessionMemory:
     def list_sessions(self) -> List[SessionSummary]: ...
 ```
 
-#### 2.6 Agent Core (`src-python/agent/core.py`)
+**Known Issues:**
+- `MAX_HISTORY_LIMIT` constant missing (referenced at line 189)
+- `session_exists()` method missing (referenced at line 192)
+
+#### 2.6 Agent Core (`src_python/agent/core.py`)
 
 ```python
 class Agent:
@@ -339,12 +347,12 @@ Content-Type: audio/mpeg
 
 #### 4.2 LLM Backend Request/Response
 
-**RunPod / OpenRouter (OpenAI-compatible):**
+**NVIDIA NIM / OpenRouter (OpenAI-compatible):**
 ```json
 // Request
 POST /v1/chat/completions
 {
-  "model": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+  "model": "nvidia/nemotron-3-super-120b-a12b",
   "messages": [{"role": "user", "content": "Hello"}],
   "temperature": 0.7,
   "max_tokens": 2048,
@@ -356,23 +364,6 @@ data: {"choices": [{"delta": {"content": "H"}}]}
 data: {"choices": [{"delta": {"content": "He"}}]}
 ...
 data: {"choices": [{"delta": {}, "finish_reason": "stop"}]}
-```
-
-**Ollama:**
-```json
-// Request
-POST /api/chat
-{
-  "model": "llama3.1:8b",
-  "messages": [{"role": "user", "content": "Hello"}],
-  "stream": true
-}
-
-// Response (NDJSON)
-{"message": {"content": "H"}, "done": false}
-{"message": {"content": "He"}, "done": false}
-...
-{"message": {"content": ""}, "done": true}
 ```
 
 #### 4.3 Tool Calling (OpenAI Function Calling Format)
@@ -408,31 +399,30 @@ POST /api/chat
 |-----------|------|
 | OS | Windows 11 (WebView2), Linux (WebKitGTK), macOS (WebKit) |
 | Rust | 1.75+ (for Tauri 2.x) |
-| Node | 20+ (pnpm recommended) |
+| Node | 20+ (npm recommended — pnpm has Windows binary issues) |
 | Python | 3.11+ |
-| GPU | RTX 3050 Ti 4GB (local inference) |
+| GPU | RTX 3050 Ti 4GB (local inference not used — NIM runs in cloud) |
 | RAM | 16GB+ recommended |
 | Disk | 5GB free (models, DB, logs, node_modules) |
 
-#### 5.2 Remote GPU (RunPod)
+#### 5.2 NVIDIA NIM (Cloud)
 
 | Spec | Recommendation |
 |------|----------------|
-| GPU | RTX 3090 / 4090 / A100 (24GB+) for 8B+ models |
-| vLLM | `--model meta-llama/Meta-Llama-3.1-8B-Instruct --dtype half --gpu-memory-utilization 0.9` |
-| Endpoint | Serverless with `min_workers=1` for warm standby |
-| Cost | ~$0.30/hr (A10) → ~$7/day if 24/7; serverless per-second cheaper |
+| Model | `nvidia/nemotron-3-super-120b-a12b` (tested working) |
+| Endpoint | `https://integrate.api.nvidia.com/v1` |
+| Auth | Bearer token (`nvapi-xxx`) |
+| Cost | Free tier available; pay-per-use beyond |
 
-#### 5.3 Local Ollama Models (4GB VRAM)
+**Available Models:** Check `https://integrate.api.nvidia.com/v1/models`
 
-| Model | Size (4-bit) | VRAM | Quality |
-|-------|--------------|------|---------|
-| `llama3.2:3b` | ~2GB | ~2.5GB | Basic |
-| `qwen2.5:7b` | ~4GB | ~4.5GB* | Good |
-| `phi3.5:3.8b` | ~2.3GB | ~2.8GB | Strong reasoning |
-| `gemma2:2b` | ~1.6GB | ~2GB | Lightweight |
+#### 5.3 OpenRouter (Fallback)
 
-*May need `--gpu-layers 20` offload to system RAM
+| Spec | Recommendation |
+|------|----------------|
+| Model | `meta-llama/llama-3.1-8b-instruct:free` (default free tier) |
+| Endpoint | `https://openrouter.ai/api/v1` |
+| Auth | Bearer token (`sk-or-xxx`) |
 
 ---
 
@@ -440,9 +430,9 @@ POST /api/chat
 
 | Requirement | Implementation |
 |-------------|----------------|
-| API keys never in code | `.env` + `.gitignore`; `python-dotenv` |
+| API keys never in code | `.env` + `.gitignore`; `python-dotenv` with explicit project root path |
 | No secrets in logs | Structured logging filters `Authorization` headers |
-| Tool sandbox | `code_exec` runs in subprocess with timeout, no network |
+| Tool sandbox | `code_exec` runs in subprocess with timeout, no network — **NOT YET IMPLEMENTED** |
 | Input validation | All tool params validated against JSON Schema |
 | Dependency scanning | `pip-audit` / `cargo audit` in CI; pinned versions |
 | Tauri allowlist | Minimal `tauri.conf.json` permissions (fs, shell, http scoped) |
@@ -470,220 +460,78 @@ POST /api/chat
 ### 8. Deployment & Operations
 
 #### 8.1 Local Development
+
 ```bash
 # Terminal 1: Python backend
-cd src-python
-uv pip install -e .
-uv run python main.py
+cd src_python
+PYTHONPATH="C:/Projects/JARVIS-Assistant/src_python" .venv/Scripts/python.exe main.py
 
 # Terminal 2: Frontend dev server
 cd src-frontend
-pnpm dev
+npm run dev
 
 # Terminal 3: Tauri dev
 cd src-tauri
-pnpm tauri dev
+npm run tauri dev
 ```
 
 #### 8.2 Production Build
+
 ```bash
 cd src-tauri
-pnpm tauri build
-# Output: src-tauri/src-tauri/target/release/bundle/
+npm run tauri build
+# Output: src-tauri/target/release/bundle/
 ```
 
-#### 8.3 RunPod Deployment
+#### 8.3 NVIDIA NIM Setup
+
+1. Create account at [NVIDIA NGC](https://ngc.nvidia.com)
+2. Get API key from [NVIDIA NIM](https://build.nvidia.com)
+3. Add to `.env`:
+   ```env
+   NVIDIA_NIM_API_KEY=nvapi-xxx
+   NVIDIA_NIM_MODEL=nvidia/nemotron-3-super-120b-a12b
+   ```
+
+#### 8.4 Google Cloud Run Deployment
+
+The Python API can be deployed as a private Cloud Run service. The Tauri desktop application continues to use its locally managed Python sidecar.
+
 ```bash
-# On RunPod instance
-docker run -d \
-  --gpus all \
-  -p 8000:8000 \
-  -e HF_TOKEN=$HF_TOKEN \
-  vllm/vllm-openai:latest \
-  --model meta-llama/Meta-Llama-3.1-8B-Instruct \
-  --dtype half
-```
-
-#### 8.4 Daily Progress Automation
-```bash
-# Cron (runs at 23:59 daily)
-0 23 * * * cd /Projects/JARVIS-Assistant && python scripts/daily_progress.py
+gcloud config set project YOUR_PROJECT_ID
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+gcloud run deploy jarvis-api \
+  --source . \
+  --region us-central1 \
+  --no-allow-unauthenticated
 ```
 
 ---
 
-### 9. Monitoring & Observability
+### 9. Known Issues & TODOs
 
-| Metric | Collection | Alert Threshold |
-|--------|------------|-----------------|
-| Request latency (p50/p95) | Structured logs | p95 > 10s |
-| Backend health | Health check cache | Any backend down >5min |
-| Tool error rate | Counter per tool | >5% in 1hr |
-| Memory DB size | File stat | >100MB |
-| Token usage | LLM response usage | N/A (tracking only) |
-| Tauri IPC latency | Rust tracing | >500ms |
-
-**Log Format (JSON):**
-```json
-{
-  "timestamp": "2026-09-12T19:45:00Z",
-  "level": "INFO",
-  "component": "llm_manager",
-  "event": "chat_completion",
-  "backend": "runpod",
-  "latency_ms": 1234,
-  "tokens_in": 150,
-  "tokens_out": 89,
-  "fallback": false
-}
-```
+| Issue | Location | Priority |
+|-------|----------|----------|
+| Health check cache TTL causes false negatives | `llm/manager.py` | High |
+| OpenRouter placeholder key returns 401 | `.env` | Medium |
+| `code_exec` tool has no sandbox | `tools/builtin/code_exec_tool.py` | High |
+| `MAX_HISTORY_LIMIT` constant missing | `memory/session.py` | Medium |
+| `session_exists()` method missing | `memory/session.py` | Medium |
+| Frontend hooks (`useChat`, `useVoice`) not implemented | `src-frontend/src/hooks/` | Medium |
+| Streaming UI not connected to chatStore | `src-frontend/src/components/MessageBubble.tsx` | Medium |
+| TTS `synthesize()` signature mismatch (voice param ignored) | `voice/tts.py` | Low |
 
 ---
 
-### 10. Extensibility Points
+### 10. Current Verified State (Sept 19, 2026)
 
-| Extension Point | How to Add |
-|-----------------|------------|
-| New LLM Backend | Implement `LLMBackend`, add to `BACKEND_MAP` in factory |
-| New Tool | Subclass `Tool`, register in `ToolRegistry` at startup |
-| New Memory Backend | Implement `SessionMemory` interface, swap in `Agent` |
-| New Voice Engine | Implement `STTEngine`/`TTSEngine` interfaces |
-| New Frontend Component | Add React component, register in `ChatWindow` |
-| New Tauri Command | Add `#[tauri::command]` function, register in `main.rs` |
-
----
-
-### 11. File Structure (Target)
-
-```
-JARVIS-Assistant/
-├── .env.example
-├── .gitignore
-├── README.md
-├── docs/
-│   ├── PRD_JARVIS_Assistant.md
-│   ├── TRD_JARVIS_Assistant.md
-│   ├── SKILLS_JARVIS_Assistant.md
-│   └── progress/
-│       └── YYYY-MM-DD.md
-├── scripts/
-│   ├── daily_progress.py
-│   └── deploy_runpod.sh
-├── src-python/
-│   ├── pyproject.toml
-│   ├── main.py                 # FastAPI entry
-│   ├── config.py
-│   ├── llm/
-│   │   ├── __init__.py
-│   │   ├── base.py
-│   │   ├── manager.py
-│   │   ├── factory.py
-│   │   ├── runpod_client.py
-│   │   ├── ollama_client.py
-│   │   └── openrouter_client.py
-│   ├── tools/
-│   │   ├── __init__.py
-│   │   ├── base.py
-│   │   ├── registry.py
-│   │   └── builtin/
-│   │       ├── __init__.py
-│   │       ├── time_tool.py
-│   │       ├── weather_tool.py
-│   │       ├── web_search_tool.py
-│   │       ├── system_info_tool.py
-│   │       ├── file_tools.py
-│   │       └── code_exec_tool.py
-│   ├── memory/
-│   │   ├── __init__.py
-│   │   ├── models.py
-│   │   └── session.py
-│   ├── agent/
-│   │   ├── __init__.py
-│   │   ├── core.py
-│   │   └── prompts.py
-│   └── voice/
-│       ├── __init__.py
-│       ├── stt.py
-│       ├── tts.py
-│       └── manager.py
-├── src-frontend/
-│   ├── package.json
-│   ├── vite.config.ts
-│   ├── tailwind.config.js
-│   ├── tsconfig.json
-│   ├── index.html
-│   ├── src/
-│   │   ├── main.tsx
-│   │   ├── App.tsx
-│   │   ├── index.css
-│   │   ├── components/
-│   │   │   ├── ChatWindow.tsx
-│   │   │   ├── MessageBubble.tsx
-│   │   │   ├── InputBar.tsx
-│   │   │   ├── VoiceButton.tsx
-│   │   │   ├── ToolResultCard.tsx
-│   │   │   ├── Sidebar.tsx
-│   │   │   └── WaveformVisualizer.tsx
-│   │   ├── hooks/
-│   │   │   ├── useChat.ts
-│   │   │   └── useVoice.ts
-│   │   ├── store/
-│   │   │   └── chatStore.ts
-│   │   ├── api/
-│   │   │   └── tauri.ts
-│   │   └── types/
-│   │       └── index.ts
-│   └── public/
-├── src-tauri/
-│   ├── Cargo.toml
-│   ├── tauri.conf.json
-│   ├── src/
-│   │   ├── main.rs
-│   │   ├── python_sidecar.rs
-│   │   └── commands/
-│   │       ├── mod.rs
-│   │       ├── chat.rs
-│   │       ├── voice.rs
-│   │       ├── tools.rs
-│   │       └── memory.rs
-│   └── icons/
-└── tests/
-    ├── python/
-    │   ├── test_config.py
-    │   ├── test_llm_backends.py
-    │   ├── test_llm_manager.py
-    │   ├── test_tools.py
-    │   ├── test_memory.py
-    │   └── test_agent.py
-    ├── rust/
-    └── frontend/
-```
-
----
-
-### 12. Open Technical Decisions
-
-| Decision | Options | Recommendation |
-|----------|---------|----------------|
-| Web search provider | Brave API / SerpAPI / browser-use / duckduckgo-html | Start with browser-use (no API key) |
-| Voice STT | faster-whisper / whisper.cpp / Vosk | faster-whisper (Python, good accuracy) |
-| Voice TTS | edge-tts / piper / coqui / bark | edge-tts (free, many voices, no model download) |
-| Wake word | Porcupine / Picovoice / custom / none | Skip for MVP; push-to-talk only |
-| Code execution sandbox | subprocess / docker / firejail / wasm | subprocess with timeout + restricted env |
-| Config format | TOML / YAML / JSON / .env only | .env + dataclass (current) |
-| Logging | structlog / loguru / stdlib logging | structlog (structured, fast) |
-| State management | Zustand / Redux Toolkit / Jotai | Zustand (simple, TypeScript-first) |
-| Markdown rendering | react-markdown / remark / MDX | react-markdown + rehype-highlight |
-
----
-
-### 13. References
-
-- [Tauri 2.x Docs](https://tauri.app/v2/)
-- [vLLM OpenAI Compatible API](https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html)
-- [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md)
-- [OpenRouter API](https://openrouter.ai/docs)
-- [faster-whisper](https://github.com/SYSTRAN/faster-whisper)
-- [edge-tts](https://github.com/rany2/edge-tts)
-- [Hermes Kanban Operations](skills/autonomous-ai-agents/hermes-kanban-operations)
-- [Plan Skill](skills/software-development/plan)
+| Endpoint | Status | Tested |
+|----------|--------|--------|
+| `GET /health` | ✅ Working | Both backends show healthy (cache-dependent) |
+| `POST /chat` | ✅ Working | Returns NVIDIA NIM response |
+| `POST /chat/stream` | ✅ Working | SSE streaming token-by-token |
+| `GET /memory/sessions` | ✅ Working | Returns session list |
+| `GET /memory/history/{id}` | ✅ Working | Returns conversation history |
+| Frontend `GET /` | ✅ Working | Serves React app on port 5173 |
+| Tauri compile | ✅ Working | `cargo build` succeeds |
+| Direct NVIDIA API | ✅ Working | `nvidia/nemotron-3-super-120b-a12b` returns 200 |

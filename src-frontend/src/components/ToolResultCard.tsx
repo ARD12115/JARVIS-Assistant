@@ -1,4 +1,3 @@
-import React from 'react'
 import { ToolCall, ToolResult } from '../types'
 import { Terminal, CheckCircle, XCircle, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'

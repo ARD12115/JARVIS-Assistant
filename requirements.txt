@@ -1,0 +1,176 @@
+# =============================================================================
+# JARVIS Assistant - Complete Requirements
+# =============================================================================
+# This file documents ALL dependencies across Python, Node.js, and Rust
+# For installation, use the respective package managers per component:
+#   Python: uv pip install -r requirements.txt (from repository root or ../requirements.txt from src_python/)
+#   Node:   pnpm install (from src-frontend/ and src-tauri/)
+#   Rust:   cargo build (from src-tauri/)
+# =============================================================================
+
+# =============================================================================
+# PYTHON DEPENDENCIES (src_python/)
+# =============================================================================
+# Core Framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+httpx>=0.28.0
+pydantic>=2.9.0
+pydantic-settings>=2.5.0
+python-dotenv>=1.0.0
+structlog>=24.1.0
+
+# LLM Clients
+openai>=1.54.0              # For RunPod & OpenRouter (OpenAI-compatible)
+ollama>=0.4.0               # Official Ollama Python client
+
+# Database
+sqlalchemy>=2.0.35
+aiosqlite>=0.20.0
+alembic>=1.13.0             # Migrations (optional for prototype)
+
+# Voice Processing
+faster-whisper>=1.1.0       # STT (CPU/CUDA)
+edge-tts>=6.1.0             # TTS (Microsoft Edge voices, no model download)
+
+# System Tools
+psutil>=6.0.0               # CPU, RAM, disk, process info
+GPUtil>=1.4.0               # GPU info (NVIDIA)
+
+# Web Search (no API key required)
+browser-use>=0.1.40         # Browser automation for search
+
+# Testing
+pytest>=8.3.0
+pytest-asyncio>=0.24.0
+pytest-cov>=6.0.0
+httpx-mock>=0.22.0
+
+# Development Tools
+ruff>=0.6.0                 # Fast Python linter/formatter
+mypy>=1.11.0                # Static type checker
+pre-commit>=3.8.0           # Git hooks
+
+# =============================================================================
+# NODE.JS DEPENDENCIES (src-frontend/)
+# =============================================================================
+# Production Dependencies
+# react@^18.3.1
+# react-dom@^18.3.1
+# zustand@^4.5.2              # State management
+# react-markdown@^9.0.1       # Markdown rendering
+# rehype-highlight@^7.0.0     # Code syntax highlighting
+# lucide-react@^0.454.0       # Icons
+# clsx@^2.1.1                 # Conditional classNames
+# tailwind-merge@^2.5.4       # Merge Tailwind classes
+# @tauri-apps/api@^2.0.3      # Tauri IPC
+
+# Development Dependencies
+# @tauri-apps/cli@^2.0.3     # Tauri CLI
+# @vitejs/plugin-react@^4.3.3
+# typescript@^5.6.3
+# vite@^5.4.10
+# tailwindcss@^3.4.14
+# autoprefixer@^10.4.20
+# postcss@^8.4.47
+# vitest@^2.1.4               # Unit testing
+# @testing-library/react@^16.0.1
+# eslint@^9.13.0
+# eslint-plugin-react-hooks@^5.0.0
+# eslint-plugin-react-refresh@^0.4.12
+# prettier@^3.3.3
+# prettier-plugin-tailwindcss@^0.6.8
+
+# =============================================================================
+# RUST DEPENDENCIES (src-tauri/Cargo.toml)
+# =============================================================================
+# Core Tauri
+# tauri = { version = "2.0", features = ["macros", "shell", "fs", "http", "process", "dialog", "clipboard-manager", "global-shortcut", "event"] }
+# tauri-plugin-shell = "2.0"
+# tauri-plugin-fs = "2.0"
+# tauri-plugin-http = "2.0"
+# tauri-plugin-process = "2.0"
+# tauri-plugin-dialog = "2.0"
+# tauri-plugin-clipboard-manager = "2.0"
+# tauri-plugin-global-shortcut = "2.0"
+# tauri-plugin-opener = "2.0"
+
+# Serialization
+# serde = { version = "1.0", features = ["derive"] }
+# serde_json = "1.0"
+
+# Async Runtime
+# tokio = { version = "1.0", features = ["full", "macros"] }
+
+# HTTP Client
+# reqwest = { version = "0.12", features = ["json", "stream", "rustls-tls"] }
+
+# Logging
+# tracing = "0.1"
+# tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Error Handling
+# anyhow = "1.0"
+# thiserror = "1.0"
+
+# Utilities
+# uuid = { version = "1.0", features = ["v4", "serde"] }
+# base64 = "0.21"
+
+# Build Dependency
+# tauri-build = { version = "2.0", features = [] }  # build-dependencies
+
+# =============================================================================
+# SYSTEM REQUIREMENTS (Pre-requisites)
+# =============================================================================
+# Rust: 1.75+ (install via rustup.rs)
+# Node.js: 20+ (with pnpm: corepack enable pnpm)
+# Python: 3.11+ (with uv: pip install uv)
+# 
+# Optional but Recommended:
+# - Ollama (for local LLM fallback): curl -fsSL https://ollama.com/install.sh | sh
+# - ffmpeg (for audio processing): winget install ffmpeg (Windows) / apt install ffmpeg (Linux)
+# - WebView2 Runtime (Windows): Included with Windows 11, or install Microsoft Edge
+# - Git: For version control
+
+# =============================================================================
+# ENVIRONMENT VARIABLES (copy .env.example to .env and configure)
+# =============================================================================
+# PRIMARY_BACKEND=runpod
+# RUNPOD_ENDPOINT=https://your-endpoint.runpod.io
+# RUNPOD_TOKEN=your-runpod-token
+# OLLAMA_HOST=http://localhost:11434
+# OLLAMA_MODEL=llama3.1:8b
+# OPENROUTER_API_KEY=your-openrouter-key
+# ANTHROPIC_API_KEY=your-anthropic-key
+# FALLBACK_BACKENDS=ollama,openrouter
+# JARVIS_DB=jarvis.db
+# LOG_LEVEL=INFO
+# VOICE_ENABLED=false
+# API_HOST=127.0.0.1
+# API_PORT=8765
+# OPENWEATHER_API_KEY=your-openweather-key
+# BRAVE_API_KEY=your-brave-key
+# SERPAPI_KEY=your-serpapi-key
+
+# =============================================================================
+# INSTALLATION COMMANDS SUMMARY
+# =============================================================================
+# 1. Python Backend:
+#    cd src_python
+#    uv venv
+#    uv pip install -e .[dev]
+#
+# 2. Frontend:
+#    cd src-frontend
+#    pnpm install
+#
+# 3. Tauri (Rust):
+#    cd src-tauri
+#    # First run downloads Rust dependencies automatically
+#    pnpm tauri dev
+#
+# 4. Run All (3 terminals):
+#    Terminal 1: cd src_python && uv run python main.py
+#    Terminal 2: cd src-frontend && pnpm dev
+#    Terminal 3: cd src-tauri && pnpm tauri dev

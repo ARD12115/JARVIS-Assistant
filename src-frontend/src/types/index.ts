@@ -33,5 +33,5 @@ export interface Session {
 export interface ChatStreamChunk {
   content: string
   done: boolean
-  toolCalls?: ToolCall[]
+  tool_calls?: ToolCall[]  // Tauri sends snake_case from Rust
 }

@@ -1,0 +1,14 @@
+﻿{
+  "name": "jarvis-tauri",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.3",
+    "@tauri-apps/api": "^2.0.3"
+  }
+}

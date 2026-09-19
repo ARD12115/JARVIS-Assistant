@@ -1,6 +1,5 @@
-import React from 'react'
 import { Session } from '../types'
-import { Plus, MessageSquare, X, Clock, ChevronRight } from 'lucide-react'
+import { Plus, MessageSquare, Clock } from 'lucide-react'
 
 interface SidebarProps {
   sessions: Session[]

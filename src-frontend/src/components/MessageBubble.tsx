@@ -1,10 +1,9 @@
-import React from 'react'
 import ReactMarkdown from 'react-markdown'
-import { remarkGfm } from 'remark-gfm'
+import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
-import { Message, ToolCall, ToolResult } from '../types'
+import { Message } from '../types'
 import { ToolResultCard } from './ToolResultCard'
-import { Copy, Terminal, ChevronDown, ChevronUp } from 'lucide-react'
+import { Copy, ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
 
 interface MessageBubbleProps {

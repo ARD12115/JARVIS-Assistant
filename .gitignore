@@ -39,6 +39,7 @@ htmlcov/
 venv/
 env/
 uv.lock
+pip-wheel-metadata/
 
 # Node / Frontend
 node_modules/
@@ -58,7 +59,6 @@ Cargo.lock
 
 # Tauri Build Output
 src-tauri/target/
-src-tauri/src-tauri/target/
 *.dmg
 *.app
 *.deb
@@ -90,6 +90,7 @@ pnpm-debug.log*
 *.sqlite
 *.sqlite3
 jarvis.db
+jarvis.db-*
 
 # Test Coverage
 coverage/
@@ -125,3 +126,14 @@ docs/progress/*.md
 # Hermes Local Data
 ~/.hermes/
 AppData/Local/hermes/
+
+# Editor/IDE specific
+*.sublime-project
+*.sublime-workspace
+.vscode/settings.json
+.vscode/launch.json
+*.code-workspace
+
+# OS generated files
+*.orig
+*.rej

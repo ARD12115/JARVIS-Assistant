@@ -1,21 +1,21 @@
-use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, State};
+﻿use serde::{Deserialize, Serialize};
+
 
 #[tauri::command]
-pub async fn list_sessions() -> Result<Vec<SessionInfo>, String> {
+pub async fn memory_list_sessions() -> Result<Vec<SessionInfo>, String> {
     let client = reqwest::Client::new();
     let resp = client
         .get("http://127.0.0.1:8765/memory/sessions")
         .send()
         .await
         .map_err(|e| e.to_string())?;
-    
+
     let sessions = resp.json().await.map_err(|e| e.to_string())?;
     Ok(sessions)
 }
 
 #[tauri::command]
-pub async fn get_history(session_id: String, limit: Option<i32>) -> Result<Vec<HistoryMessage>, String> {
+pub async fn memory_get_history(session_id: String, limit: Option<i32>) -> Result<Vec<HistoryMessage>, String> {
     let client = reqwest::Client::new();
     let url = format!(
         "http://127.0.0.1:8765/memory/history/{}?limit={}",
@@ -27,13 +27,13 @@ pub async fn get_history(session_id: String, limit: Option<i32>) -> Result<Vec<H
         .send()
         .await
         .map_err(|e| e.to_string())?;
-    
+
     let history = resp.json().await.map_err(|e| e.to_string())?;
     Ok(history)
 }
 
 #[tauri::command]
-pub async fn load_session(session_id: String) -> Result<bool, String> {
+pub async fn memory_load_session(session_id: String) -> Result<bool, String> {
     let client = reqwest::Client::new();
     let resp = client
         .post("http://127.0.0.1:8765/memory/load")
@@ -41,33 +41,37 @@ pub async fn load_session(session_id: String) -> Result<bool, String> {
         .send()
         .await
         .map_err(|e| e.to_string())?;
-    
+
     Ok(resp.status().is_success())
 }
 
 #[tauri::command]
-pub async fn new_session() -> Result<String, String> {
+pub async fn memory_new_session() -> Result<String, String> {
     let client = reqwest::Client::new();
     let resp = client
         .post("http://127.0.0.1:8765/memory/new")
         .send()
         .await
         .map_err(|e| e.to_string())?;
-    
+
     let data: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
     Ok(data["session_id"].as_str().unwrap_or("").to_string())
 }
 
 #[tauri::command]
-pub async fn search_memory(session_id: String, query: String, limit: Option<i32>) -> Result<Vec<HistoryMessage>, String> {
+pub async fn memory_search_memory(session_id: String, query: String, limit: Option<i32>) -> Result<Vec<HistoryMessage>, String> {
     let client = reqwest::Client::new();
     let resp = client
         .get("http://127.0.0.1:8765/memory/search")
-        .query(&[("session_id", session_id), ("query", query), ("limit", limit.unwrap_or(10).to_string())])
+        .query(&[
+            ("session_id", session_id),
+            ("query", query),
+            ("limit", limit.unwrap_or(10).to_string())
+        ])
         .send()
         .await
         .map_err(|e| e.to_string())?;
-    
+
     let results = resp.json().await.map_err(|e| e.to_string())?;
     Ok(results)
 }
@@ -100,3 +104,10 @@ pub struct ToolFunction {
     pub name: String,
     pub arguments: String,
 }
+
+
+
+
+
+
+

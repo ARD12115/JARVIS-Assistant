@@ -1,13 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { Message, ChatStreamChunk } from '../types'
+import { useEffect, useRef } from 'react'
+import { ChatStreamChunk } from '../types'
 import { MessageBubble } from './MessageBubble'
 import { InputBar } from './InputBar'
 import { useChatStore } from '../store/chatStore'
 
 export function ChatWindow({ sessionId, isTauri }: { sessionId: string | null; isTauri: boolean }) {
-  const { messages, addMessage, updateMessage, clearMessages, isStreaming, setIsStreaming } = useChatStore()
+  const { messages, updateMessage, isStreaming, setIsStreaming } = useChatStore()
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [streamBuffer, setStreamBuffer] = useState<string>('')
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -33,9 +32,10 @@ export function ChatWindow({ sessionId, isTauri }: { sessionId: string | null; i
               isStreaming: !chunk.done
             })
           }
-          if (chunk.toolCalls && chunk.toolCalls.length > 0) {
+          // Tauri emits snake_case: tool_calls
+          if (chunk.tool_calls && chunk.tool_calls.length > 0) {
             updateMessage(lastMsg.id, { 
-              toolCalls: chunk.toolCalls,
+              toolCalls: chunk.tool_calls,
               isStreaming: !chunk.done
             })
           }
@@ -94,7 +94,7 @@ export function ChatWindow({ sessionId, isTauri }: { sessionId: string | null; i
       )}
 
       {/* Input Bar */}
-      <InputBar sessionId={sessionId} disabled={isStreaming} />
+      <InputBar disabled={isStreaming} />
     </div>
   )
 }

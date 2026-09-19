@@ -9,9 +9,9 @@
 **Version:** 1.0 (Prototype)  
 **Owner:** Abhinav Derla  
 **Target Date:** September 30, 2026 (Yugma TechFest 2026 deadline)  
-**Status:** Active Development  
+**Status:** Active Development — Backend stable for 49+ hours, ready for Tauri integration  
 
-JARVIS is a JARVIS-inspired AI assistant that runs as a **native desktop application** (Tauri 2.x) with a React/TypeScript chat UI. It provides a conversational interface with tool-use capabilities (web search, system control, file operations), persistent memory across sessions, and voice I/O (push-to-talk STT + TTS). The multi-backend LLM architecture (RunPod vLLM primary → local Ollama fallback → hosted API tertiary) ensures resilience against rate limits and outages. Daily progress tracking via Hermes kanban for portfolio documentation.
+JARVIS is a JARVIS-inspired AI assistant that runs as a **native desktop application** (Tauri 2.x) with a React/TypeScript chat UI. It provides a conversational interface with tool-use capabilities (web search, system control, file operations), persistent memory across sessions, and voice I/O (push-to-talk STT + TTS). The multi-backend LLM architecture (NVIDIA NIM primary → OpenRouter fallback) ensures resilience against rate limits and outages. Daily progress tracking via Hermes kanban for portfolio documentation.
 
 ---
 
@@ -41,7 +41,7 @@ Current AI assistants suffer from:
 
 | ID | Feature | Priority | Description |
 |----|---------|----------|-------------|
-| F1 | Multi-Backend LLM Layer | P0 | RunPod vLLM (primary) → Ollama local → OpenRouter/Anthropic (fallback) with auto-failover |
+| F1 | Multi-Backend LLM Layer | P0 | NVIDIA NIM (primary) → OpenRouter (fallback) with auto-failover |
 | F2 | Tool Registry | P0 | Pluggable tools: time, weather, web search, system info, file ops, code execution |
 | F3 | Persistent Session Memory | P0 | SQLite-backed conversation history, search, summarization, cross-session recall |
 | F4 | Native Desktop Chat UI | P0 | Tauri + React + TypeScript: streaming messages, markdown, code blocks, tool cards, sidebar history |
@@ -100,6 +100,7 @@ Current AI assistants suffer from:
 - Plugin marketplace
 - Wake-word detection (Porcupine/Picovoice) — stretch only
 - Advanced RAG / document ingestion — v1.1
+- Ollama / RunPod backends (removed per user request — keep NIM + OpenRouter only)
 
 ---
 
@@ -107,9 +108,9 @@ Current AI assistants suffer from:
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|------------|--------|------------|
-| RunPod cold starts >10s | Medium | High | Keep warm instance; async health checks |
-| 4GB VRAM too small for useful local model | High | Medium | 4-bit 3B/7B only; document as fallback-only |
-| Free API tier exhaustion | High | High | Multi-backend design; paid tier budget $10/mo |
+| NVIDIA NIM API changes | Low | Medium | Version-pinned models; health check cache |
+| 4GB VRAM too small for useful local model | N/A | N/A | Local Ollama removed; NIM runs in cloud |
+| Free API tier exhaustion | Medium | High | Multi-backend design; paid tier budget $10/mo |
 | Tauri/Rust learning curve | Medium | Medium | Start with template; use Python sidecar pattern |
 | WebView2 distribution on Windows | Low | High | Bundle WebView2 bootstrapper in installer |
 | Scope creep (voice, GUI, etc.) | High | Medium | Kanban WIP limits; stretch goals explicitly labeled |
@@ -120,15 +121,18 @@ Current AI assistants suffer from:
 
 | Week | Focus | Deliverable |
 |------|-------|-------------|
-| 1 (Sep 12-18) | Foundation + LLM Layer | Tauri+React+Python scaffold, 3 backends, auto-fallback working |
-| 2 (Sep 19-25) | Tools + Memory + Agent Core | 5+ tools, SQLite memory, FastAPI backend, agent loop |
+| 1 (Sep 12-18) | Foundation + LLM Layer | Tauri+React+Python scaffold, NIM + OpenRouter backends, auto-fallback working ✅ **DONE** |
+| 2 (Sep 19-25) | Tools + Memory + Agent Core | 7 tools, SQLite memory, FastAPI backend, agent loop ✅ **DONE** |
 | 3 (Sep 26-30) | Frontend + Voice + Integration | Chat UI, streaming, voice, Tauri commands, demo script, README |
+
+**Current State (Sep 19, 2026):** Phases 1-2 complete. Backend running stably for 49+ hours. Phase 3 in progress — Tauri desktop app compiles, needs `npx tauri dev` to test integrated UI.
 
 ---
 
 ### 11. Appendix: Daily Progress Tracking Format
 
 Each day produces `docs/progress/YYYY-MM-DD.md`:
+
 ```markdown
 # Daily Progress — YYYY-MM-DD
 

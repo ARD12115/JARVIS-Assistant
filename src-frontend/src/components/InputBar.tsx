@@ -1,9 +1,9 @@
-import React, { useRef, useState, useEffect } from 'react'
-import { Send, Mic, MicOff, Paperclip, ArrowUp } from 'lucide-react'
+import { useRef, useState, useEffect } from 'react'
+import { Mic, MicOff, ArrowUp } from 'lucide-react'
 import { useChatStore } from '../store/chatStore'
 
-export function InputBar({ sessionId, disabled }: { sessionId: string; disabled: boolean }) {
-  const { sendMessage, isRecording, setIsRecording, startVoiceInput, stopVoiceInput } = useChatStore()
+export function InputBar({ disabled }: { disabled: boolean }) {
+  const { sendMessage, isRecording, startVoiceInput, stopVoiceInput } = useChatStore()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [value, setValue] = useState('')
   const [height, setHeight] = useState(48)
