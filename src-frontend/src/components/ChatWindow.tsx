@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { ChatStreamChunk } from '../types'
 import { MessageBubble } from './MessageBubble'
 import { InputBar } from './InputBar'
 import { useChatStore } from '../store/chatStore'
 import { Sparkles, Brain, Zap, ExternalLink, X } from 'lucide-react'
 
-const WelcomeScreen = ({ onNewChat, showShortcuts, setShowShortcuts }) => (
+const WelcomeScreen = ({ onNewChat }: { onNewChat: () => void }) => (
   <div className="flex-1 flex flex-col">
     <div className="flex-1 flex items-center justify-center p-8">
       <div className="text-center max-w-xl mx-auto animate-in">
@@ -45,47 +45,10 @@ const WelcomeScreen = ({ onNewChat, showShortcuts, setShowShortcuts }) => (
               <ExternalLink className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </span>
           </button>
-          <button onClick={() => setShowShortcuts(true)} className="btn-secondary px-8 py-3">
-            Keyboard Shortcuts
-          </button>
         </div>
       </div>
     </div>
-  )
-)
-
-const ShortcutsModal = ({ showShortcuts, setShowShortcuts }) => (
-  showShortcuts && (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in">
-      <div className="bg-jarvis-surface border border-jarvis-border rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-auto animate-in scale-in">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-jarvis-text">Keyboard Shortcuts</h3>
-          <button onClick={() => setShowShortcuts(false)} className="btn-ghost p-1 rounded-xl hover:bg-jarvis-surface">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="space-y-3 text-sm">
-          {[
-            ['Ctrl + K', 'New chat'],
-            ['Ctrl + Enter', 'Send message'],
-            ['Shift + Enter', 'New line'],
-            ['Ctrl + /', 'Focus input'],
-            ['Ctrl + B', 'Toggle sidebar'],
-            ['Ctrl + M', 'Toggle voice'],
-            ['Escape', 'Close modals / Stop streaming'],
-          ].map(([key, desc]) => (
-            <div key={key} className="flex items-center justify-between py-2 px-3 rounded-xl bg-jarvis-bg/50 border border-jarvis-border/50">
-              <span className="text-jarvis-textMuted">{desc}</span>
-              <kbd className="px-2 py-1 bg-jarvis-surface border border-jarvis-border rounded-lg text-jarvis-text font-mono text-xs">{key}</kbd>
-            </div>
-          ))}
-        </div>
-        <button onClick={() => setShowShortcuts(false)} className="btn-primary w-full mt-4">
-          Got it
-        </button>
-      </div>
-    </div>
-  )
+  </div>
 )
 
 const EmptyState = () => (
@@ -102,10 +65,13 @@ const EmptyState = () => (
         <span className="px-3 py-1 bg-jarvis-surface border border-jarvis-border rounded-full">Try: "Run python code"</span>
       </div>
     </div>
-  )
+  </div>
 )
 
-const StreamingIndicator = ({ isStreaming, setIsStreaming }) => (
+const StreamingIndicator = ({ isStreaming, setIsStreaming }: {
+  isStreaming: boolean
+  setIsStreaming: (streaming: boolean) => void
+}) => (
   isStreaming && (
     <div className="streaming-indicator mx-6 mb-4 animate-in slide-up">
       <div className="flex items-center gap-3">
@@ -129,13 +95,12 @@ export function ChatWindow({
   isTauri, 
   onNewChat
 }: { 
-  sessionId: string | null; 
-  isTauri: boolean;
-  onNewChat?: () => void;
+  sessionId: string | null
+  isTauri: boolean
+  onNewChat?: () => void
 }) {
   const { messages, updateMessage, isStreaming, setIsStreaming } = useChatStore()
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [showShortcuts, setShowShortcuts] = useState(false)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -169,7 +134,7 @@ export function ChatWindow({
 
   // Welcome Screen (no session)
   if (!sessionId) {
-    return <WelcomeScreen onNewChat={onNewChat} />
+    return <WelcomeScreen onNewChat={onNewChat || (() => {})} />
   }
 
   return (

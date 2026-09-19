@@ -9,7 +9,6 @@ function App() {
   const [isTauri, setIsTauri] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [showWelcome, setShowWelcome] = useState(true)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
   const { sessions, currentSessionId, loadSessions, setCurrentSession } = useChatStore()
@@ -37,7 +36,6 @@ function App() {
     try {
       const sessionId = await invoke('create_session') as string
       setCurrentSession(sessionId)
-      setShowWelcome(false)
       showToast('New chat created', 'success')
     } catch (error) {
       showToast('Failed to create chat', 'error')
@@ -46,7 +44,6 @@ function App() {
 
   const handleSessionSelect = (sessionId: string) => {
     setCurrentSession(sessionId)
-    setShowWelcome(false)
     if (sidebarCollapsed) setSidebarCollapsed(false)
   }
 
@@ -199,7 +196,6 @@ function App() {
         <ChatWindow 
           sessionId={currentSessionId}
           isTauri={isTauri}
-          showWelcome={showWelcome && !currentSessionId}
           onNewChat={handleNewChat}
         />
       </main>

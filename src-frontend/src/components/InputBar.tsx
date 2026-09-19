@@ -6,17 +6,17 @@ export function InputBar({ disabled }: { disabled: boolean }) {
   const { 
     sendMessage, 
     isRecording: isRecordingStore, 
-    startVoiceInput: startVoiceInputStore, 
-    stopVoiceInput: stopVoiceInputStore 
+    startVoiceInput, 
+    stopVoiceInput,
+    setIsRecording
   } = useChatStore()
   
-  const [isRecording, setIsRecording] = useState(isRecordingStore)
-  const [startVoiceInput] = useState(startVoiceInputStore)
-  const [stopVoiceInput] = useState(stopVoiceInputStore)
-  
+  const [isRecording, setIsRecordingLocal] = useState(isRecordingStore)
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
+
   // Sync with store
   useEffect(() => {
-    setIsRecording(isRecordingStore)
+    setIsRecordingLocal(isRecordingStore)
   }, [isRecordingStore])
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -64,13 +64,73 @@ export function InputBar({ disabled }: { disabled: boolean }) {
     }
   }, [handleSubmit, showAttachMenu])
 
-  const handleVoiceToggle = async () => {
+  const handleVoiceToggle = useCallback(async () => {
     if (isRecording) {
-      await stopVoiceInput()
+      await stopVoiceRecording()
     } else {
-      await startVoiceInput()
+      await startVoiceRecording()
     }
-  }, [isRecording, startVoiceInput, stopVoiceInput]
+  }, [isRecording])
+
+  const startVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      const chunks: Blob[] = []
+      
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data)
+        }
+      }
+      
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' })
+        await sendVoiceToSTT(audioBlob)
+        stream.getTracks().forEach(track => track.stop())
+      }
+      
+      setMediaRecorder(recorder)
+      recorder.start(100) // Collect data every 100ms
+      setIsRecording(true)
+      setIsRecordingLocal(true)
+      await startVoiceInput()
+    } catch (error) {
+      console.error('Failed to start voice recording:', error)
+    }
+  }
+
+  const stopVoiceRecording = async () => {
+    const recorder = mediaRecorder
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop()
+    }
+    setIsRecording(false)
+    setIsRecordingLocal(false)
+    await stopVoiceInput()
+    await setMediaRecorder(null)
+  }
+
+  const sendVoiceToSTT = async (audioBlob: Blob) => {
+    try {
+      const formData = new FormData()
+      formData.append('audio', audioBlob, 'recording.webm')
+      
+      const response = await fetch('http://127.0.0.1:8765/voice/stt', {
+        method: 'POST',
+        body: formData
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.text) {
+          sendMessage(data.text)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to send voice to STT:', error)
+    }
+  }
 
   const handleAttachClick = (type: string) => {
     setShowAttachMenu(false)
@@ -79,8 +139,6 @@ export function InputBar({ disabled }: { disabled: boolean }) {
   }
 
   const isEmpty = !value.trim()
-
-  const { sendMessage, isRecording: _isRecording, startVoiceInput: _startVoiceInput, stopVoiceInput: _stopVoiceInput } = useChatStore()
 
   return (
     <form onSubmit={handleSubmit} className="input-area relative">

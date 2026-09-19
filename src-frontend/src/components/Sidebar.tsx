@@ -13,7 +13,6 @@ interface SidebarProps {
 
 export function Sidebar({ sessions, currentSessionId, onSessionSelect, onNewChat, collapsed, formatTime }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [filter, setFilter] = useState<'all' | 'recent' | 'archived'>('all')
 
   const filteredSessions = sessions.filter(session => {
     const matchesSearch = session.preview.toLowerCase().includes(searchQuery.toLowerCase()) ||

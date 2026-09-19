@@ -1,1 +1,1 @@
-{}
+{"default":{"identifier":"default","description":"Default capabilities for JARVIS Assistant","local":true,"windows":["main"],"permissions":["core:default","core:event:allow-listen","core:event:allow-emit","core:event:allow-emit-to","core:event:allow-unlisten","core:window:default","shell:default","fs:default","dialog:default","clipboard-manager:default","global-shortcut:default","http:default","process:default","core:webview:allow-internal-toggle-devtools"]}}

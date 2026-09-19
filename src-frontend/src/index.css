@@ -126,7 +126,7 @@
   
   /* ========== SIDEBAR ========== */
   .sidebar-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-jarvis-textMuted hover:text-jarvis-text hover:bg-jarvis-surface/50 transition-all duration-200 cursor-pointer group;
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-jarvis-textMuted hover:text-jarvis-text hover:bg-jarvis-surface/50 transition-all duration-200 cursor-pointer;
   }
   
   .sidebar-item-active {
