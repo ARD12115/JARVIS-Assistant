@@ -110,10 +110,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     
     try {
       // Invoke Tauri command - this starts the stream and emits 'chat-stream' events
-      // The command returns after starting the stream; actual chunks come via events
+      // The command expects a `request` parameter matching the Rust ChatRequest struct
       await invoke('send_message', { 
-        session_id: currentSessionId,  // snake_case to match Rust ChatRequest
-        content: content.trim() 
+        request: {  // Tauri expects the parameter name to match the Rust function parameter
+          session_id: currentSessionId,
+          content: content.trim()
+        }
       })
     } catch (error) {
       console.error('Failed to send message:', error)
@@ -132,16 +134,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setIsRecording: (recording) => set({ isRecording: recording }),
   startVoiceInput: async () => {
     set({ isRecording: true })
-    try {
-      await invoke('start_voice_recording')
-    } catch (error) {
-      console.error('Failed to start voice recording:', error)
-      set({ isRecording: false })
-    }
+    // Voice recording is handled by the InputBar component using MediaRecorder
+    // This just sets the recording state; actual STT happens on stop
   },
   stopVoiceInput: async () => {
     try {
-      await invoke('stop_voice_recording')
+      set({ isRecording: false })
+      // Voice input stopped - the InputBar handles sending audio to voice_stt
     } catch (error) {
       console.error('Failed to stop voice recording:', error)
     } finally {

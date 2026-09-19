@@ -10,11 +10,11 @@ interface MessageBubbleProps {
   message: Message
 }
 
-const codeBlockComponent = ({ children, ...props }: any) => {
+const CodeBlock = ({ children, className }: any) => {
   const [copied, setCopied] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const code = typeof children === 'string' ? children : children.props?.children || ''
-  const language = props.className?.replace('language-', '') || ''
+  const language = className?.replace('language-', '') || ''
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code)
@@ -54,7 +54,7 @@ const codeBlockComponent = ({ children, ...props }: any) => {
         </div>
       </div>
       <pre className={`p-4 overflow-x-auto font-mono text-sm ${!expanded ? 'max-h-[300px]' : 'max-h-none'}`}>
-        <code className={props.className}>{code}</code>
+        <code className={className}>{code}</code>
       </pre>
     </div>
   )
@@ -101,7 +101,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         }`}>
           <ReactMarkdown
             components={{
-              code: codeBlockComponent,
+              code: CodeBlock,
               pre: ({ children }) => children, // Handled by code component
             }}
             remarkPlugins={[remarkGfm]}
