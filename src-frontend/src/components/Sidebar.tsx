@@ -106,4 +106,3 @@ export function Sidebar({ sessions, currentSessionId, onSessionSelect, onNewChat
     </div>
   )
 }
-)
