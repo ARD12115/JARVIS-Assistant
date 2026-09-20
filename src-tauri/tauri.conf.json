@@ -33,12 +33,6 @@
   },
   "plugins": {
     "shell": { "open": true },
-    "fs": { "requireLiteralLeadingDot": false },
-    "dialog": null,
-    "clipboardManager": null,
-    "globalShortcut": null,
-    "http": {
-      "scope": ["http://127.0.0.1:8765/**"]
-    }
+    "fs": { "requireLiteralLeadingDot": false }
   }
 }
