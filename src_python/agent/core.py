@@ -81,6 +81,9 @@ class Agent:
                 if chunk.done:
                     break
             
+            # Track which backend was used
+            backend_used = self.llm_manager.get_last_backend_used()
+            
             # Execute tool calls if any
             if tool_calls_made:
                 tool_results = await self._execute_tool_calls(tool_calls_made)
@@ -141,9 +144,8 @@ class Agent:
             )
 
     async def _execute_tool_calls(self, tool_calls: List[ToolCall]) -> List[ToolResult]:
-        """Execute multiple tool calls in sequence."""
-        results = []
-        for tc in tool_calls:
+        """Execute multiple tool calls in parallel."""
+        async def execute_one(tc: ToolCall) -> ToolResult:
             func = tc["function"]
             name = func["name"]
             try:
@@ -151,7 +153,8 @@ class Agent:
                 result = await asyncio.to_thread(self.tool_registry.execute, name, **args)
                 if inspect.isawaitable(result):
                     result = await result
-                results.append(result)
+                return result
             except Exception as e:
-                results.append(ToolResult(success=False, error=f"Failed to execute {name}: {e}"))
-        return results
+                return ToolResult(success=False, error=f"Failed to execute {name}: {e}")
+        
+        return await asyncio.gather(*(execute_one(tc) for tc in tool_calls))

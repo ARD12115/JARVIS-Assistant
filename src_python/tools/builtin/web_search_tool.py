@@ -39,10 +39,21 @@ class WebSearchTool(Tool):
         return asyncio.run(self._execute_async(query, max_results))
 
     async def _execute_async(self, query: str, max_results: int = 5) -> ToolResult:
-        # Try browser-use first (no API key needed)
+        # Prefer a configured search API first — it's an order of magnitude
+        # cheaper and faster than spinning up a full headless browser.
+        if self.config.brave_key:
+            result = await self._brave_search(query, max_results)
+            if result.success:
+                return result
+        if self.config.serpapi_key:
+            result = await self._serpapi_search(query, max_results)
+            if result.success:
+                return result
+
+        # Fall back to browser-use (no API key needed, but a cold browser
+        # launch per search is heavy — only worth it when nothing else works)
         try:
-            from browser_use import Browser, Agent as BrowserAgent
-            from browser_use.llm import ChatOpenAI
+            from browser_use import Browser
             
             browser = Browser()
             try:
@@ -68,16 +79,8 @@ class WebSearchTool(Tool):
                 return ToolResult(success=True, data={"results": results})
         except Exception as e:
             print(f"browser-use search failed: {e}")
-        
-        # Fallback to Brave API if available
-        if self.config.brave_key:
-            return await self._brave_search(query, max_results)
-        
-        # Fallback to SerpAPI if available
-        if self.config.serpapi_key:
-            return await self._serpapi_search(query, max_results)
-        
-        return ToolResult(success=False, error="No search provider available (need browser-use, Brave, or SerpAPI)")
+
+        return ToolResult(success=False, error="No search provider available (need Brave, SerpAPI, or browser-use)")
 
     async def _brave_search(self, query: str, max_results: int) -> ToolResult:
         import httpx

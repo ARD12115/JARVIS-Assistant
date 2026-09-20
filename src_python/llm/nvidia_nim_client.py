@@ -26,16 +26,15 @@ class NVIDIANIMClient(LLMBackend):
         )
 
     def is_available(self) -> bool:
-        # Actually test the API with a simple request
+        # Actually test the API with a simple request - use /models endpoint (cheap, no billing)
         if not self.key:
             return False
         try:
-            # Quick sync check
+            # Quick sync check using models endpoint
             with httpx.Client(timeout=10.0) as client:
-                resp = client.post(
-                    f"{self.base_url}/chat/completions",
-                    headers={"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"},
-                    json={"model": self.model, "messages": [{"role": "user", "content": "test"}], "max_tokens": 1},
+                resp = client.get(
+                    f"{self.base_url}/models",
+                    headers={"Authorization": f"Bearer {self.key}"}
                 )
                 return resp.status_code == 200
         except Exception:

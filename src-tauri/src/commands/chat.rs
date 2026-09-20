@@ -1,5 +1,5 @@
 ﻿use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, State};
 use futures_util::StreamExt;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -32,8 +32,8 @@ pub struct ToolFunction {
 pub async fn send_message(
     app: AppHandle,
     request: ChatRequest,
+    client: State<'_, reqwest::Client>,
 ) -> Result<(), String> {
-    let client = reqwest::Client::new();
     let resp = client
         .post("http://127.0.0.1:8765/chat/stream")
         .json(&request)
@@ -72,8 +72,9 @@ pub async fn send_message(
 }
 
 #[tauri::command]
-pub async fn create_session() -> Result<String, String> {
-    let client = reqwest::Client::new();
+pub async fn create_session(
+    client: State<'_, reqwest::Client>,
+) -> Result<String, String> {
     let resp = client
         .post("http://127.0.0.1:8765/memory/new")
         .send()
@@ -85,8 +86,9 @@ pub async fn create_session() -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn list_sessions() -> Result<Vec<SessionInfo>, String> {
-    let client = reqwest::Client::new();
+pub async fn list_sessions(
+    client: State<'_, reqwest::Client>,
+) -> Result<Vec<SessionInfo>, String> {
     let resp = client
         .get("http://127.0.0.1:8765/memory/sessions")
         .send()
@@ -98,8 +100,10 @@ pub async fn list_sessions() -> Result<Vec<SessionInfo>, String> {
 }
 
 #[tauri::command]
-pub async fn get_history(session_id: String) -> Result<Vec<HistoryMessage>, String> {
-    let client = reqwest::Client::new();
+pub async fn get_history(
+    session_id: String,
+    client: State<'_, reqwest::Client>,
+) -> Result<Vec<HistoryMessage>, String> {
     let resp = client
         .get(format!("http://127.0.0.1:8765/memory/history/{}", session_id))
         .send()
@@ -111,8 +115,10 @@ pub async fn get_history(session_id: String) -> Result<Vec<HistoryMessage>, Stri
 }
 
 #[tauri::command]
-pub async fn load_session(session_id: String) -> Result<bool, String> {
-    let client = reqwest::Client::new();
+pub async fn load_session(
+    session_id: String,
+    client: State<'_, reqwest::Client>,
+) -> Result<bool, String> {
     let resp = client
         .post("http://127.0.0.1:8765/memory/load")
         .json(&serde_json::json!({ "session_id": session_id }))

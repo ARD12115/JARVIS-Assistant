@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 import { Mic, MicOff, Paperclip, Smile, ArrowUpRight, RotateCcw } from 'lucide-react'
 import { useChatStore } from '../store/chatStore'
 
-export function InputBar({ disabled }: { disabled: boolean }) {
+export function InputBar({ disabled, onNotify }: { disabled: boolean; onNotify?: (msg: string, type: 'success' | 'error') => void }) {
   const { 
     sendMessage, 
     isRecording: isRecordingStore, 
@@ -64,15 +64,7 @@ export function InputBar({ disabled }: { disabled: boolean }) {
     }
   }, [handleSubmit, showAttachMenu])
 
-  const handleVoiceToggle = useCallback(async () => {
-    if (isRecording) {
-      await stopVoiceRecording()
-    } else {
-      await startVoiceRecording()
-    }
-  }, [isRecording])
-
-  const startVoiceRecording = async () => {
+  const startVoiceRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const recorder = new MediaRecorder(stream)
@@ -98,9 +90,9 @@ export function InputBar({ disabled }: { disabled: boolean }) {
     } catch (error) {
       console.error('Failed to start voice recording:', error)
     }
-  }
+  }, [startVoiceInput])
 
-  const stopVoiceRecording = async () => {
+  const stopVoiceRecording = useCallback(async () => {
     const recorder = mediaRecorder
     if (recorder && recorder.state !== 'inactive') {
       recorder.stop()
@@ -109,7 +101,15 @@ export function InputBar({ disabled }: { disabled: boolean }) {
     setIsRecordingLocal(false)
     await stopVoiceInput()
     await setMediaRecorder(null)
-  }
+  }, [mediaRecorder, stopVoiceInput])
+
+  const handleVoiceToggle = useCallback(async () => {
+    if (isRecording) {
+      await stopVoiceRecording()
+    } else {
+      await startVoiceRecording()
+    }
+  }, [isRecording, startVoiceRecording, stopVoiceRecording])
 
   const sendVoiceToSTT = async (audioBlob: Blob) => {
     try {
@@ -134,8 +134,10 @@ export function InputBar({ disabled }: { disabled: boolean }) {
 
   const handleAttachClick = (type: string) => {
     setShowAttachMenu(false)
-    // TODO: Implement file attachment, image upload, etc.
-    console.log('Attach:', type)
+    // Show coming soon toast
+    if (onNotify) {
+      onNotify(`${type} attachment coming soon`, 'success')
+    }
   }
 
   const isEmpty = !value.trim()

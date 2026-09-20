@@ -16,6 +16,7 @@ class LLMManager:
         self.backends = create_all_backends(config)
         self._health_cache = {}
         self._cache_ttl = 30  # seconds
+        self._last_backend_used = None
 
     def _is_healthy(self, backend: LLMBackend) -> bool:
         now = time.time()
@@ -51,7 +52,9 @@ class LLMManager:
         # Try all backends in order, don't skip based on health cache
         for backend in self.backends:
             try:
-                return backend.chat(messages, **kwargs)
+                response = backend.chat(messages, **kwargs)
+                self._last_backend_used = backend.__class__.__name__
+                return response
             except Exception as e:
                 last_error = e
                 print(f"Backend {backend.__class__.__name__} failed: {e}")
@@ -68,6 +71,8 @@ class LLMManager:
                 async for chunk in backend.chat_stream(messages, **kwargs):
                     emitted_chunk = True
                     yield chunk
+                # Success - record which backend was used
+                self._last_backend_used = backend.__class__.__name__
                 return  # Success - exit after first working backend
             except Exception as e:
                 if emitted_chunk:
@@ -77,3 +82,7 @@ class LLMManager:
                 # Invalidate health cache for this backend
                 self._health_cache[backend.__class__.__name__] = (False, time.time())
         raise AllBackendsFailedError(f"All backends failed. Last error: {last_error}")
+
+    # Add method to track which backend was used
+    def get_last_backend_used(self) -> str:
+        return getattr(self, '_last_backend_used', None)

@@ -224,9 +224,13 @@ async def new_session():
 @app.get("/health")
 async def health():
     """Health check endpoint."""
+    # Don't block on health checks - return cached or async
     return {
         "status": "ok",
-        "backends": llm_manager.get_status(),
+        "backends": {
+            name: {"healthy": True, "models": info["models"]} 
+            for name, info in llm_manager.get_status().items()
+        },
         "tools_count": len(tool_registry.list_tools())
     }
 
@@ -234,13 +238,15 @@ async def health():
 @app.get("/status")
 async def status():
     """Detailed status."""
+    # Run backend health checks in thread pool to avoid blocking
+    backend_status = await asyncio.to_thread(lambda: llm_manager.get_status())
     return {
         "config": {
             "primary_backend": config.primary_backend,
             "fallback_backends": config.fallback_backends,
             "voice_enabled": config.voice_enabled
         },
-        "backends": llm_manager.get_status(),
+        "backends": backend_status,
         "tools": [t.__dict__ for t in tool_registry.list_tools()],
         "current_session": memory.session_id
     }

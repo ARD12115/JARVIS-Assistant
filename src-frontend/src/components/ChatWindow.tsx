@@ -147,7 +147,7 @@ export function ChatWindow({
         <div ref={messagesEndRef} />
       </div>
       <StreamingIndicator isStreaming={isStreaming} setIsStreaming={setIsStreaming} />
-      <InputBar disabled={isStreaming} />
+      <InputBar disabled={isStreaming} onNotify={() => {}} />
     </div>
   )
 }

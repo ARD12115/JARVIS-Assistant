@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { isTauri as checkIsTauri } from '@tauri-apps/api/core'
 import { ChatWindow } from './components/ChatWindow'
 import { Sidebar } from './components/Sidebar'
 import { useChatStore } from './store/chatStore'
-import { Menu, X, Sparkles, Bot, Zap, Shield, Mic, Settings } from 'lucide-react'
+import { Menu, X, Sparkles, Bot, Zap, Shield, Settings } from 'lucide-react'
 
 function App() {
   const [isTauri, setIsTauri] = useState(false)
@@ -13,14 +14,12 @@ function App() {
   const sidebarRef = useRef<HTMLDivElement>(null)
   const { sessions, currentSessionId, loadSessions, setCurrentSession } = useChatStore()
 
-  // Check if running in Tauri
+  // Check if running in Tauri - use proper API
   useEffect(() => {
     const checkTauri = async () => {
       try {
-        await invoke('send_message', { 
-          request: { sessionId: 'health-check', content: '' } 
-        })
-        setIsTauri(true)
+        const result = await checkIsTauri()
+        setIsTauri(result)
       } catch {
         setIsTauri(false)
       }
@@ -62,6 +61,14 @@ function App() {
     if (days === 1) return 'Yesterday'
     if (days < 7) return `${days}d ago`
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  }
+
+  const handleSettingsClick = () => {
+    showToast('Settings coming soon', 'success')
+  }
+
+  const handleShieldClick = () => {
+    showToast('Privacy & Security settings coming soon', 'success')
   }
 
   return (
@@ -179,13 +186,18 @@ function App() {
             )}
             
             <div className="flex items-center gap-1">
-              <button className="btn-ghost p-2 rounded-xl hover:bg-jarvis-primary/10" aria-label="Settings">
+              <button 
+                onClick={handleSettingsClick}
+                className="btn-ghost p-2 rounded-xl hover:bg-jarvis-primary/10" 
+                aria-label="Settings"
+              >
                 <Settings className="w-5 h-5" />
               </button>
-              <button className="btn-ghost p-2 rounded-xl hover:bg-jarvis-primary/10" aria-label="Voice">
-                <Mic className="w-5 h-5" />
-              </button>
-              <button className="btn-ghost p-2 rounded-xl hover:bg-jarvis-primary/10" aria-label="Shield">
+              <button 
+                onClick={handleShieldClick}
+                className="btn-ghost p-2 rounded-xl hover:bg-jarvis-primary/10" 
+                aria-label="Privacy & Security"
+              >
                 <Shield className="w-5 h-5" />
               </button>
             </div>

@@ -7,6 +7,13 @@ use python_sidecar::PythonSidecar;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 fn main() {
+    // Create a shared HTTP client with connection pooling
+    let http_client = reqwest::Client::builder()
+        .pool_max_idle_per_host(10)
+        .pool_idle_timeout(std::time::Duration::from_secs(30))
+        .build()
+        .expect("Failed to create HTTP client");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
@@ -16,6 +23,7 @@ fn main() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
+        .manage(http_client)
         .setup(|app| {
             let sidecar = Arc::new(PythonSidecar::new(app.handle())?);
             tauri::async_runtime::block_on(sidecar.start())?;

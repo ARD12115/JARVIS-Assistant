@@ -1,5 +1,5 @@
 ﻿use serde::{Deserialize, Serialize};
-
+use tauri::State;
 use base64::{Engine as _, engine::general_purpose};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -14,8 +14,10 @@ pub struct VoiceTTSRequest {
 }
 
 #[tauri::command]
-pub async fn voice_stt(request: VoiceSTTRequest) -> Result<String, String> {
-    let client = reqwest::Client::new();
+pub async fn voice_stt(
+    request: VoiceSTTRequest,
+    client: State<'_, reqwest::Client>,
+) -> Result<String, String> {
 
     let audio_bytes = general_purpose::STANDARD
         .decode(&request.audio_base64)
@@ -38,8 +40,10 @@ pub async fn voice_stt(request: VoiceSTTRequest) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn voice_tts(request: VoiceTTSRequest) -> Result<String, String> {
-    let client = reqwest::Client::new();
+pub async fn voice_tts(
+    request: VoiceTTSRequest,
+    client: State<'_, reqwest::Client>,
+) -> Result<String, String> {
 
     let resp = client
         .post("http://127.0.0.1:8765/voice/tts")
@@ -55,8 +59,9 @@ pub async fn voice_tts(request: VoiceTTSRequest) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn list_voices() -> Result<serde_json::Value, String> {
-    let client = reqwest::Client::new();
+pub async fn list_voices(
+    client: State<'_, reqwest::Client>,
+) -> Result<serde_json::Value, String> {
     let resp = client
         .get("http://127.0.0.1:8765/voice/voices")
         .send()

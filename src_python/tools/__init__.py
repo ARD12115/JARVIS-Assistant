@@ -21,6 +21,11 @@ def create_tool_registry(config: Config = None) -> ToolRegistry:
     registry.register(FileReadTool())
     registry.register(FileWriteTool())
     registry.register(FileListTool())
+    
+    # Conditionally register code execution tool (security-sensitive)
+    if cfg.code_exec_enabled:
+        registry.register(CodeExecTool())
+    
     return registry
 
 

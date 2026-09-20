@@ -1,5 +1,5 @@
 ﻿use serde::{Deserialize, Serialize};
-
+use tauri::State;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ToolExecuteRequest {
@@ -8,8 +8,9 @@ pub struct ToolExecuteRequest {
 }
 
 #[tauri::command]
-pub async fn list_tools() -> Result<Vec<ToolInfo>, String> {
-    let client = reqwest::Client::new();
+pub async fn list_tools(
+    client: State<'_, reqwest::Client>,
+) -> Result<Vec<ToolInfo>, String> {
     let resp = client
         .get("http://127.0.0.1:8765/tools")
         .send()
@@ -21,8 +22,10 @@ pub async fn list_tools() -> Result<Vec<ToolInfo>, String> {
 }
 
 #[tauri::command]
-pub async fn execute_tool(request: ToolExecuteRequest) -> Result<ToolResult, String> {
-    let client = reqwest::Client::new();
+pub async fn execute_tool(
+    request: ToolExecuteRequest,
+    client: State<'_, reqwest::Client>,
+) -> Result<ToolResult, String> {
     let resp = client
         .post(format!("http://127.0.0.1:8765/tools/{}", request.tool_name))
         .json(&request.params)

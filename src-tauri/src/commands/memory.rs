@@ -1,9 +1,10 @@
 ﻿use serde::{Deserialize, Serialize};
-
+use tauri::State;
 
 #[tauri::command]
-pub async fn memory_list_sessions() -> Result<Vec<SessionInfo>, String> {
-    let client = reqwest::Client::new();
+pub async fn memory_list_sessions(
+    client: State<'_, reqwest::Client>,
+) -> Result<Vec<SessionInfo>, String> {
     let resp = client
         .get("http://127.0.0.1:8765/memory/sessions")
         .send()
@@ -15,8 +16,11 @@ pub async fn memory_list_sessions() -> Result<Vec<SessionInfo>, String> {
 }
 
 #[tauri::command]
-pub async fn memory_get_history(session_id: String, limit: Option<i32>) -> Result<Vec<HistoryMessage>, String> {
-    let client = reqwest::Client::new();
+pub async fn memory_get_history(
+    session_id: String,
+    limit: Option<i32>,
+    client: State<'_, reqwest::Client>,
+) -> Result<Vec<HistoryMessage>, String> {
     let url = format!(
         "http://127.0.0.1:8765/memory/history/{}?limit={}",
         session_id,
@@ -33,8 +37,10 @@ pub async fn memory_get_history(session_id: String, limit: Option<i32>) -> Resul
 }
 
 #[tauri::command]
-pub async fn memory_load_session(session_id: String) -> Result<bool, String> {
-    let client = reqwest::Client::new();
+pub async fn memory_load_session(
+    session_id: String,
+    client: State<'_, reqwest::Client>,
+) -> Result<bool, String> {
     let resp = client
         .post("http://127.0.0.1:8765/memory/load")
         .json(&serde_json::json!({ "session_id": session_id }))
@@ -46,8 +52,9 @@ pub async fn memory_load_session(session_id: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
-pub async fn memory_new_session() -> Result<String, String> {
-    let client = reqwest::Client::new();
+pub async fn memory_new_session(
+    client: State<'_, reqwest::Client>,
+) -> Result<String, String> {
     let resp = client
         .post("http://127.0.0.1:8765/memory/new")
         .send()
@@ -59,8 +66,12 @@ pub async fn memory_new_session() -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn memory_search_memory(session_id: String, query: String, limit: Option<i32>) -> Result<Vec<HistoryMessage>, String> {
-    let client = reqwest::Client::new();
+pub async fn memory_search_memory(
+    session_id: String,
+    query: String,
+    limit: Option<i32>,
+    client: State<'_, reqwest::Client>,
+) -> Result<Vec<HistoryMessage>, String> {
     let resp = client
         .get("http://127.0.0.1:8765/memory/search")
         .query(&[
