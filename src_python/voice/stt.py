@@ -1,5 +1,7 @@
 import asyncio
 import io
+import os
+import tempfile
 import threading
 from typing import Optional
 from faster_whisper import WhisperModel
@@ -9,7 +11,7 @@ class STTEngine:
     def __init__(self, model_size: str = "base", device: str = "auto", compute_type: str = "auto"):
         """
         Initialize faster-whisper model.
-        
+
         Args:
             model_size: tiny, base, small, medium, large-v3
             device: cpu, cuda, auto
@@ -39,19 +41,22 @@ class STTEngine:
 
     def _transcribe_sync(self, audio_file: io.BytesIO, language: str) -> str:
         model = self._get_model()
-        
-        # Save to temp file for faster-whisper
-        import tempfile
-        with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as f:
-            f.write(audio_file.read())
-            temp_path = f.name
-        
+
+        # Create secure temp file with restricted permissions
+        fd, temp_path = tempfile.mkstemp(suffix=".webm", prefix="jarvis_stt_", dir=None)
         try:
+            # Write audio data
+            with os.fdopen(fd, "wb") as f:
+                f.write(audio_file.read())
+            
+            # Secure the file - owner read/write only
+            os.chmod(temp_path, 0o600)
+            
             segments, info = model.transcribe(temp_path, language=language, beam_size=5)
             text = " ".join([seg.text for seg in segments])
             return text.strip()
         finally:
-            import os
+            # Always cleanup
             try:
                 os.unlink(temp_path)
             except Exception:

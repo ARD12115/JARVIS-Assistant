@@ -21,7 +21,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' http://127.0.0.1:8765 ws://127.0.0.1:8765 https://api.openweathermap.org https://api.search.brave.com https://serpapi.com; img-src 'self' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data: https://fonts.gstatic.com;"
+      "csp": "default-src 'self'; connect-src 'self' http://127.0.0.1:8765 ws://127.0.0.1:8765 https://api.openweathermap.org https://api.search.brave.com https://serpapi.com; img-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data: https://fonts.gstatic.com;"
     }
   },
   "bundle": {
@@ -33,6 +33,10 @@
   },
   "plugins": {
     "shell": { "open": true },
-    "fs": { "requireLiteralLeadingDot": false }
+    "fs": { "requireLiteralLeadingDot": true },
+    "dialog": { "open": true, "save": true },
+    "clipboard-manager": { "write": true },
+    "global-shortcut": { "all": false },
+    "process": { "scope": [] }
   }
 }

@@ -25,7 +25,6 @@ class Config:
             if backend.strip()
         ]
     )
-    code_exec_enabled: bool = os.getenv("CODE_EXEC_ENABLED", "false").lower() == "true"
 
     # Application Configuration
     db_path: str = os.getenv("JARVIS_DB", "jarvis.db")
@@ -33,7 +32,7 @@ class Config:
     voice_enabled: bool = os.getenv("VOICE_ENABLED", "false").lower() == "true"
 
     # FastAPI Server
-    api_host: str = os.getenv("API_HOST", "0.0.0.0")
+    api_host: str = os.getenv("API_HOST", "127.0.0.1")
     api_port: int = int(os.getenv("PORT", os.getenv("API_PORT", "8765")))
 
     # External API Keys

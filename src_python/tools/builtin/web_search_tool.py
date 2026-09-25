@@ -32,13 +32,63 @@ class WebSearchTool(Tool):
         }
     }
 
+    # Allowlisted search domains - SSRF protection
+    ALLOWED_DOMAINS = {
+        "api.search.brave.com",
+        "serpapi.com",
+        "duckduckgo.com",
+        "html.duckduckgo.com",
+    }
+
     def __init__(self, config: Config = None):
         self.config = config or Config()
 
     def execute(self, query: str, max_results: int = 5) -> ToolResult:
         return asyncio.run(self._execute_async(query, max_results))
 
+    def _validate_query(self, query: str) -> tuple[bool, str]:
+        """Validate search query for safety."""
+        if not query or not query.strip():
+            return False, "Empty query"
+        
+        query = query.strip()
+        
+        # Length limit
+        if len(query) > 500:
+            return False, "Query too long (max 500 chars)"
+        
+        # Block dangerous patterns
+        dangerous_patterns = [
+            "javascript:", "data:", "file:", "ftp:", "gopher:",
+            "ldap:", "dict:", "sftp:", "smb:", "ws:", "wss:",
+            "vbscript:", "mocha:", "livescript:",
+        ]
+        
+        query_lower = query.lower()
+        for pattern in dangerous_patterns:
+            if pattern in query_lower:
+                return False, f"Blocked pattern in query: {pattern}"
+        
+        # No shell metacharacters
+        shell_chars = [';', '&', '|', '$', '`', '(', ')', '<', '>', '\n', '\r']
+        for ch in shell_chars:
+            if ch in query:
+                return False, f"Invalid character in query: {repr(ch)}"
+        
+        return True, query
+
     async def _execute_async(self, query: str, max_results: int = 5) -> ToolResult:
+        # Validate query first
+        valid, result = self._validate_query(query)
+        if not valid:
+            return ToolResult(success=False, error=f"Invalid query: {result}")
+        
+        query = result  # Sanitized query
+        
+        # Validate max_results
+        if max_results < 1 or max_results > 20:
+            max_results = 5
+
         # Prefer a configured search API first — it's an order of magnitude
         # cheaper and faster than spinning up a full headless browser.
         if self.config.brave_key:
@@ -52,6 +102,7 @@ class WebSearchTool(Tool):
 
         # Fall back to browser-use (no API key needed, but a cold browser
         # launch per search is heavy — only worth it when nothing else works)
+        # NOTE: SSRF protection - only allow duckduckgo.com
         try:
             from browser_use import Browser
             
@@ -60,7 +111,18 @@ class WebSearchTool(Tool):
                 await browser.start()
                 # Use a simple search approach without full agent for speed
                 page = await browser.new_page()
-                await page.goto(f"https://duckduckgo.com/html/?q={query.replace(' ', '+')}")
+                
+                # SSRF PROTECTION: Only allow duckduckgo.com
+                safe_query = query.replace(' ', '+').replace('"', '').replace("'", "")
+                url = f"https://duckduckgo.com/html/?q={safe_query}"
+                
+                # Validate URL against allowlist
+                from urllib.parse import urlparse
+                parsed = urlparse(url)
+                if parsed.netloc not in self.ALLOWED_DOMAINS:
+                    return ToolResult(success=False, error=f"Blocked domain: {parsed.netloc}")
+                
+                await page.goto(url)
                 
                 results = await page.evaluate(f"""
                     () => {{

@@ -13,9 +13,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Global variable to track all child processes
-$global:jarvisProcesses = @()
-$global:pidFile = Join-Path $env:TEMP "jarvis_pids_$(Get-Random).txt"
+# Track all child processes
+$script:jarvisProcesses = @()
+$script:pidFile = Join-Path $env:TEMP "jarvis_pids_$(Get-Random).txt"
 
 function Write-Header {
     Write-Host "==========================================" -ForegroundColor Cyan
@@ -95,28 +95,25 @@ function Start-Service {
     $process.EnableRaisingEvents = $true
     
     # Capture output for debugging
-    $output = New-Object System.Text.StringBuilder
-    $process.Add_OutputDataReceived({
-        param($sender, $e)
-        if ($e.Data) { $global:jarvisOutput.AppendLine("[$Name] $($e.Data)") }
-    })
-    $process.Add_ErrorDataReceived({
-        param($sender, $e)
-        if ($e.Data) { $global:jarvisError.AppendLine("[$Name] ERROR: $($e.Data)") }
-    })
+    $script:jarvisOutput = New-Object System.Text.StringBuilder
+    $script:jarvisError = New-Object System.Text.StringBuilder
     
-    $global:jarvisOutput = New-Object System.Text.StringBuilder
-    $global:jarvisError = New-Object System.Text.StringBuilder
+    Register-ObjectEvent -InputObject $process -EventName OutputDataReceived -Action {
+        if ($Event.SourceEventArgs.Data) { $script:jarvisOutput.AppendLine("[$Name] $($Event.SourceEventArgs.Data)") }
+    } | Out-Null
+    Register-ObjectEvent -InputObject $process -EventName ErrorDataReceived -Action {
+        if ($Event.SourceEventArgs.Data) { $script:jarvisError.AppendLine("[$Name] ERROR: $($Event.SourceEventArgs.Data)") }
+    } | Out-Null
     
     if ($process.Start()) {
         $process.BeginOutputReadLine()
         $process.BeginErrorReadLine()
-        $global:jarvisProcesses += @{
+        $script:jarvisProcesses += @{
             Name = $Name
             Process = $process
             Id = $process.Id
         }
-        "$Name=$($process.Id)" | Out-File -FilePath $global:pidFile -Append -Encoding utf8
+        "$Name=$($process.Id)" | Out-File -FilePath $script:pidFile -Append -Encoding utf8
         Write-Host "[$Name] Started (PID: $($process.Id))" -ForegroundColor Green
         return $process
     } else {
@@ -129,7 +126,7 @@ function Stop-AllServices {
     Write-Host "`nShutting down all JARVIS services..." -ForegroundColor Yellow
     
     # Stop tracked processes
-    foreach ($entry in $global:jarvisProcesses) {
+    foreach ($entry in $script:jarvisProcesses) {
         try {
             if (-not $entry.Process.HasExited) {
                 $entry.Process.Kill()
@@ -164,14 +161,14 @@ function Stop-AllServices {
     }
     
     # Clean up PID file
-    if (Test-Path $global:pidFile) {
-        Remove-Item $global:pidFile -Force -ErrorAction SilentlyContinue
+    if (Test-Path $script:pidFile) {
+        Remove-Item $script:pidFile -Force -ErrorAction SilentlyContinue
     }
     
     Write-Host "All services stopped." -ForegroundColor Green
 }
 
-# Setup cleanup on exit (Ctrl+C, error, normal exit)
+# Setup cleanup on exit
 function Invoke-Cleanup {
     Stop-AllServices
     exit 0
@@ -217,7 +214,7 @@ Write-Host "Starting JARVIS Assistant services..." -ForegroundColor Green
 Write-Host ""
 
 # Clear PID file
-New-Item -Path $global:pidFile -ItemType File -Force | Out-Null
+New-Item -Path $script:pidFile -ItemType File -Force | Out-Null
 
 # 1. Python Backend
 $pythonProcess = Start-Service -Name "Python Backend" -WorkingDir $PythonDir `
@@ -243,7 +240,7 @@ Write-Host "Python Backend:  http://127.0.0.1:8765" -ForegroundColor Cyan
 Write-Host "Frontend Dev:    http://localhost:5173" -ForegroundColor Cyan
 Write-Host "Tauri App:       Native desktop window" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "PID file: $global:pidFile" -ForegroundColor Gray
+Write-Host "PID file: $script:pidFile" -ForegroundColor Gray
 Write-Host "Press Ctrl+C to stop all services cleanly." -ForegroundColor Yellow
 Write-Host ""
 
@@ -253,14 +250,13 @@ try {
         Start-Sleep -Seconds 5
         
         # Check for failed processes
-        foreach ($entry in $global:jarvisProcesses) {
+        foreach ($entry in $script:jarvisProcesses) {
             if ($entry.Process.HasExited) {
                 $exitCode = $entry.Process.ExitCode
                 if ($exitCode -ne 0) {
                     Write-Error "[$($entry.Name)] Process exited with code $exitCode"
-                    # Read captured error output
-                    if ($global:jarvisError.Length -gt 0) {
-                        Write-Host $global:jarvisError.ToString() -ForegroundColor Red
+                    if ($script:jarvisError.Length -gt 0) {
+                        Write-Host $script:jarvisError.ToString() -ForegroundColor Red
                     }
                 }
             }
