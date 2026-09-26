@@ -23,6 +23,10 @@ from src_python.voice.stt import stt_engine
 from src_python.voice.tts import tts_engine
 from src_python.llm.base import Message, ChatStreamChunk
 from src_python.auth.session_auth import session_auth, SessionAuth
+from src_python.dialogue.manager import DialogueManager
+from src_python.nlu.pipeline import NLUPipeline
+from src_python.nlu.zero_shot import ZeroShotNLU
+from src_python.admin.routes import router as admin_router
 
 # Constants
 MAX_AUDIO_UPLOAD_BYTES = 10 * 1024 * 1024
@@ -57,6 +61,8 @@ llm_manager = None
 tool_registry = None
 memory = None
 agent = None
+dialogue_manager = None
+nlu_pipeline = None
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -115,20 +121,32 @@ class RequestSizeMiddleware(BaseHTTPMiddleware):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global llm_manager, tool_registry, memory, agent
-    
+    global llm_manager, tool_registry, memory, agent, dialogue_manager, nlu_pipeline
+
     # Initialize components
     llm_manager = LLMManager(config)
     tool_registry = create_tool_registry(config)
     memory = SessionMemory(config.db_path)
     agent = Agent(llm_manager, tool_registry, memory)
     
+    # Initialize NLU pipeline and Dialogue Manager
+    nlu_pipeline = NLUPipeline([
+        ZeroShotNLU(
+            intents=["get_time", "web_search", "file_ops", "weather", "cancel", "fallback"],
+            entities=["timezone", "free_text", "file_operation", "file_path", "location"],
+            llm_manager=llm_manager,
+        )
+    ])
+    dialogue_manager = DialogueManager.from_config(config, llm_manager)
+
     print("JARVIS Backend initialized")
     print(f"Available backends: {list(llm_manager.get_status().keys())}")
     print(f"Available tools: {[t.name for t in tool_registry.list_tools()]}")
-    
+    print(f"NLU Pipeline: {len(nlu_pipeline.components)} components")
+    print(f"Intents loaded: {len(dialogue_manager.intents)}")
+
     yield
-    
+
     # Cleanup
     print("Shutting down JARVIS Backend")
 
@@ -147,7 +165,7 @@ app.add_middleware(RateLimitMiddleware)
 app.add_middleware(RequestSizeMiddleware)
 app.add_middleware(
     TrustedHostMiddleware, 
-    allowed_hosts=["localhost", "127.0.0.1", "tauri.localhost"]
+    allowed_hosts=["localhost", "127.0.0.1", "tauri.localhost", "testserver"]
 )
 
 app.add_middleware(
@@ -158,6 +176,9 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],
     max_age=3600,
 )
+
+# Include admin router
+app.include_router(admin_router)
 
 
 # Request/Response Models with validation
