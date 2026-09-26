@@ -1,39 +1,36 @@
 @echo off
-REM JARVIS Assistant Launcher - Windows Batch Version
-REM Starts Python Backend, Frontend Dev Server, and Tauri App with proper cleanup
+REM JARVIS Assistant - Unified Launcher/Stopper
+REM Usage: launch_jarvis.bat [start|stop|restart|status]
 REM Run from project root: C:\Projects\JARVIS-Assistant
 
 setlocal enabledelayedexpansion
 
 set "PROJECT_ROOT=C:\Projects\JARVIS-Assistant"
-set "PYTHON_DIR=%PROJECT_ROOT%\src_python"
-set "FRONTEND_DIR=%PROJECT_ROOT%\src-frontend"
 set "TAURI_DIR=%PROJECT_ROOT%\src-tauri"
-set "PID_FILE=%TEMP%\jarvis_pids_%DATE:/=-%_%TIME::=-%.txt"
-set "PID_FILE=%PID_FILE:.=-%"
+set "ACTION=%~1"
+if "%ACTION%"=="" set "ACTION=start"
 
 echo ==========================================
-echo   JARVIS Assistant Launcher
+echo   JARVIS Assistant - Tauri Native App
 echo ==========================================
 echo Project Root: %PROJECT_ROOT%
+echo Action: %ACTION%
 echo.
 
 REM Check directories
-if not exist "%PYTHON_DIR%" (
-    echo ERROR: Python directory not found: %PYTHON_DIR%
-    pause
-    exit /b 1
-)
-if not exist "%FRONTEND_DIR%" (
-    echo ERROR: Frontend directory not found: %FRONTEND_DIR%
-    pause
-    exit /b 1
-)
 if not exist "%TAURI_DIR%" (
     echo ERROR: Tauri directory not found: %TAURI_DIR%
     pause
     exit /b 1
 )
+
+if "%ACTION%"=="stop" goto :stop
+if "%ACTION%"=="status" goto :status
+if "%ACTION%"=="restart" goto :restart
+
+:start
+echo Starting JARVIS Assistant (Tauri Native App)...
+echo.
 
 REM Check .env
 if not exist "%PROJECT_ROOT%\.env" (
@@ -44,62 +41,67 @@ if not exist "%PROJECT_ROOT%\.env" (
 REM Kill any existing JARVIS processes first
 call :cleanup_existing
 
-echo Starting JARVIS Assistant services...
+echo Starting JARVIS Assistant (Tauri Native App)...
 echo.
 
-REM Clear PID file
-type nul > "%PID_FILE%"
-
-REM Start Python Backend
-echo [1/3] Starting Python Backend...
-start "JARVIS Python Backend" cmd /k "
-    cd /d %PYTHON_DIR%
-    set PYTHONPATH=%PROJECT_ROOT%\src_python
-    .venv\Scripts\python.exe main.py
-"
-
-REM Wait a moment for backend to start
-timeout /t 3 >nul
-
-REM Start Frontend Dev Server
-echo [2/3] Starting Frontend Dev Server...
-start "JARVIS Frontend" cmd /k "
-    cd /d %FRONTEND_DIR%
-    npm run dev
-"
-
-REM Wait for frontend to compile
-timeout /t 5 >nul
-
-REM Start Tauri App
-echo [3/3] Starting Tauri App...
-start "JARVIS Tauri App" cmd /k "
+REM Start Tauri App - this manages Python sidecar internally
+start "JARVIS Assistant" cmd /k "
     cd /d %TAURI_DIR%
     npx tauri dev
 "
 
 echo.
 echo ==========================================
-echo All services started!
+echo JARVIS Assistant started!
 echo ==========================================
 echo.
-echo Python Backend:  http://127.0.0.1:8765
-echo Frontend Dev:    http://localhost:5173
-echo Tauri App:       Native desktop window
+echo Native desktop window should open shortly.
+echo Close the window to stop the application.
 echo.
-echo Close individual windows to stop services.
-echo PID file: %PID_FILE%
+echo Press any key to exit this launcher (app will keep running).
 echo.
 pause
+goto :eof
 
-REM Cleanup on exit
+:stop
+echo Stopping JARVIS Assistant...
+echo.
+call :cleanup_existing
+echo.
+echo All JARVIS processes stopped.
+echo ==========================================
+pause
+goto :eof
+
+:restart
+echo Restarting JARVIS Assistant...
+echo.
+call :cleanup_existing
+echo.
+timeout /t 2 >nul
+goto :start
+
+:status
+echo Checking JARVIS processes...
+echo.
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8765 :5173"') do (
+    if "%%p" NEQ "0" (
+        echo Port %%p: PID %%p RUNNING
+    )
+)
+tasklist /FI "IMAGENAME eq jarvis-assistant.exe" /FI "IMAGENAME eq python.exe" /FI "IMAGENAME eq node.exe" /FO TABLE
+echo.
+pause
+goto :eof
+
 :cleanup_existing
 REM Kill any existing processes on our ports
 for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8765 :5173"') do (
     if "%%p" NEQ "0" taskkill /F /PID %%p >nul 2>&1
 )
 REM Kill any existing JARVIS windows
-taskkill /F /FI "WINDOWTITLE eq JARVIS Python Backend*" >nul 2>&1
-taskkill /F /FI "WINDOWTITLE eq JARVIS Frontend*" >nul 2>&1
-taskkill /F /FI "WINDOWTITLE eq JARVIS Tauri App*" >nul 2>&1
-goto :EOF
+taskkill /F /FI "WINDOWTITLE eq JARVIS*" >nul 2>&1
+taskkill /F /FI "IMAGENAME eq jarvis-assistant.exe" >nul 2>&1
+taskkill /F /FI "IMAGENAME eq python.exe" /FI "WINDOWTITLE eq JARVIS*" >nul 2>&1
+taskkill /F /FI "IMAGENAME eq node.exe" /FI "WINDOWTITLE eq JARVIS*" >nul 2>&1
+goto :eof

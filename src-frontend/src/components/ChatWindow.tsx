@@ -101,19 +101,23 @@ export function ChatWindow({
 }) {
   const { messages, updateMessage, isStreaming, setIsStreaming } = useChatStore()
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const unlistenRef = useRef<(() => void) | null>(null)
+  const messagesRef = useRef(messages)
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  // Keep messagesRef current
+  messagesRef.current = messages
 
+  // Setup Tauri event listener once when isTauri becomes true
   useEffect(() => {
     if (!isTauri) return
+    
     let unlisten: (() => void) | null = null
     const setupListener = async () => {
       const { listen } = await import('@tauri-apps/api/event')
       unlisten = await listen<ChatStreamChunk>('chat-stream', (event) => {
         const chunk = event.payload
-        const lastMsg = messages[messages.length - 1]
+        const currentMessages = messagesRef.current
+        const lastMsg = currentMessages[currentMessages.length - 1]
         if (lastMsg && lastMsg.role === 'assistant' && lastMsg.isStreaming) {
           if (chunk.content) {
             updateMessage(lastMsg.id, { content: lastMsg.content + chunk.content, isStreaming: !chunk.done })
@@ -127,10 +131,16 @@ export function ChatWindow({
           }
         }
       })
+      unlistenRef.current = unlisten
     }
     setupListener()
-    return () => { unlisten?.() }
-  }, [isTauri, messages, updateMessage, setIsStreaming])
+    return () => { unlistenRef.current?.() }
+  }, [isTauri, updateMessage, setIsStreaming])
+
+  // Auto-scroll
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   // Welcome Screen (no session)
   if (!sessionId) {

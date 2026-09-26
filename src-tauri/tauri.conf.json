@@ -31,12 +31,5 @@
       "icons/icon.ico"
     ]
   },
-  "plugins": {
-    "shell": { "open": true },
-    "fs": { "requireLiteralLeadingDot": true },
-    "dialog": { "open": true, "save": true },
-    "clipboard-manager": { "write": true },
-    "global-shortcut": { "all": false },
-    "process": { "scope": [] }
-  }
+  "plugins": {}
 }

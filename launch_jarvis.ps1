@@ -1,27 +1,26 @@
 <#>
 .SYNOPSIS
-    JARVIS Assistant Launcher - PowerShell Version with Complete Cleanup
+    JARVIS Assistant - Unified Launcher/Stopper
 .DESCRIPTION
-    Starts Python Backend, Frontend Dev Server, and Tauri App with proper process management
-    and guaranteed cleanup on exit (Ctrl+C, error, or normal termination).
+    Usage: launch_jarvis.ps1 [start|stop|restart|status]
+    Starts Tauri native app which manages Python sidecar internally.
     Run from project root: C:\Projects\JARVIS-Assistant
 #>
 
 param(
-    [string]$ProjectRoot = "C:\Projects\JARVIS-Assistant"
+    [string]$ProjectRoot = "C:\Projects\JARVIS-Assistant",
+    [ValidateSet("start","stop","restart","status")]
+    [string]$Action = "start"
 )
 
 $ErrorActionPreference = "Stop"
 
-# Track all child processes
-$script:jarvisProcesses = @()
-$script:pidFile = Join-Path $env:TEMP "jarvis_pids_$(Get-Random).txt"
-
 function Write-Header {
     Write-Host "==========================================" -ForegroundColor Cyan
-    Write-Host "   JARVIS Assistant Launcher (PowerShell)" -ForegroundColor Cyan
+    Write-Host "   JARVIS Assistant - Tauri Native App" -ForegroundColor Cyan
     Write-Host "==========================================" -ForegroundColor Cyan
     Write-Host "Project Root: $ProjectRoot" -ForegroundColor Yellow
+    Write-Host "Action: $Action" -ForegroundColor Yellow
     Write-Host ""
 }
 
@@ -42,7 +41,7 @@ function Cleanup-ExistingProcesses {
     }
     
     # Kill by window title
-    $titles = @("JARVIS Python Backend*", "JARVIS Frontend*", "JARVIS Tauri App*")
+    $titles = @("JARVIS*")
     foreach ($title in $titles) {
         $processes = Get-Process | Where-Object { $_.MainWindowTitle -like $title }
         foreach ($proc in $processes) {
@@ -50,95 +49,24 @@ function Cleanup-ExistingProcesses {
         }
     }
     
-    # Kill any leftover node/python processes from previous runs
-    $staleProcesses = Get-Process | Where-Object {
-        ($_.ProcessName -eq "node" -or $_.ProcessName -eq "python") -and
-        ($_.Path -like "*JARVIS*" -or $_.Path -like "*jarvis*")
-    }
-    foreach ($proc in $staleProcesses) {
-        try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
+    # Kill by process name
+    $processNames = @("jarvis-assistant", "python", "node")
+    foreach ($name in $processNames) {
+        $procs = Get-Process -Name $name -ErrorAction SilentlyContinue
+        foreach ($proc in $procs) {
+            if ($proc.MainWindowTitle -like "*JARVIS*" -or $proc.Path -like "*JARVIS*") {
+                try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
+            }
+        }
     }
     
     Start-Sleep -Milliseconds 500
 }
 
-function Start-Service {
-    param(
-        [string]$Name,
-        [string]$WorkingDir,
-        [string]$Command,
-        [string[]]$Args
-    )
+function Show-Status {
+    Write-Host "Checking JARVIS processes..." -ForegroundColor Cyan
+    Write-Host ""
     
-    Write-Host "[$Name] Starting..." -ForegroundColor Yellow
-    
-    # Use cmd /c for commands that need shell resolution (like npm, npx)
-    $needsShell = @("npm", "npx", "node") -contains (Split-Path $Command -Leaf)
-    
-    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
-    if ($needsShell) {
-        $startInfo.FileName = "cmd.exe"
-        $startInfo.Arguments = "/c " + ($Command + " " + ($Args -join " "))
-        $startInfo.UseShellExecute = $false
-    } else {
-        $startInfo.FileName = $Command
-        $startInfo.Arguments = ($Args -join " ")
-        $startInfo.UseShellExecute = $false
-    }
-    $startInfo.WorkingDirectory = $WorkingDir
-    $startInfo.CreateNoWindow = $true
-    $startInfo.RedirectStandardOutput = $true
-    $startInfo.RedirectStandardError = $true
-    
-    $process = New-Object System.Diagnostics.Process
-    $process.StartInfo = $startInfo
-    $process.EnableRaisingEvents = $true
-    
-    # Capture output for debugging
-    $script:jarvisOutput = New-Object System.Text.StringBuilder
-    $script:jarvisError = New-Object System.Text.StringBuilder
-    
-    Register-ObjectEvent -InputObject $process -EventName OutputDataReceived -Action {
-        if ($Event.SourceEventArgs.Data) { $script:jarvisOutput.AppendLine("[$Name] $($Event.SourceEventArgs.Data)") }
-    } | Out-Null
-    Register-ObjectEvent -InputObject $process -EventName ErrorDataReceived -Action {
-        if ($Event.SourceEventArgs.Data) { $script:jarvisError.AppendLine("[$Name] ERROR: $($Event.SourceEventArgs.Data)") }
-    } | Out-Null
-    
-    if ($process.Start()) {
-        $process.BeginOutputReadLine()
-        $process.BeginErrorReadLine()
-        $script:jarvisProcesses += @{
-            Name = $Name
-            Process = $process
-            Id = $process.Id
-        }
-        "$Name=$($process.Id)" | Out-File -FilePath $script:pidFile -Append -Encoding utf8
-        Write-Host "[$Name] Started (PID: $($process.Id))" -ForegroundColor Green
-        return $process
-    } else {
-        Write-Error "Failed to start $Name"
-        return $null
-    }
-}
-
-function Stop-AllServices {
-    Write-Host "`nShutting down all JARVIS services..." -ForegroundColor Yellow
-    
-    # Stop tracked processes
-    foreach ($entry in $script:jarvisProcesses) {
-        try {
-            if (-not $entry.Process.HasExited) {
-                $entry.Process.Kill()
-                $entry.Process.WaitForExit(5000)
-                Write-Host "[$($entry.Name)] Stopped (PID: $($entry.Id))" -ForegroundColor Green
-            }
-        } catch {
-            Write-Warning "Failed to stop $($entry.Name): $_"
-        }
-    }
-    
-    # Fallback: kill by port
     $ports = @(8765, 5173)
     foreach ($port in $ports) {
         $processIds = netstat -ano | Select-String ":$port\s" | ForEach-Object {
@@ -146,60 +74,28 @@ function Stop-AllServices {
         } | Sort-Object -Unique
         foreach ($pid in $processIds) {
             if ($pid -and $pid -ne "0") {
-                try { Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue } catch {}
+                Write-Host "Port $port: PID $pid RUNNING" -ForegroundColor Green
             }
         }
     }
     
-    # Fallback: kill by window title
-    $titles = @("JARVIS Python Backend*", "JARVIS Frontend*", "JARVIS Tauri App*")
-    foreach ($title in $titles) {
-        $processes = Get-Process | Where-Object { $_.MainWindowTitle -like $title }
-        foreach ($proc in $processes) {
-            try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
-        }
-    }
-    
-    # Clean up PID file
-    if (Test-Path $script:pidFile) {
-        Remove-Item $script:pidFile -Force -ErrorAction SilentlyContinue
-    }
-    
-    Write-Host "All services stopped." -ForegroundColor Green
-}
-
-# Setup cleanup on exit
-function Invoke-Cleanup {
-    Stop-AllServices
-    exit 0
-}
-
-# Trap Ctrl+C only in interactive mode
-if ([System.Console]::IsInputRedirected -eq $false) {
-    try {
-        [System.Console]::CancelKeyPress.Add({
-            param($sender, $e)
-            $e.Cancel = $true
-            Invoke-Cleanup
-        })
-    } catch {
-        # CancelKeyPress not available in non-interactive mode
+    $processes = Get-Process -Name "jarvis-assistant", "python", "node" -ErrorAction SilentlyContinue
+    if ($processes) {
+        Write-Host ""
+        Write-Host "Related Processes:" -ForegroundColor Cyan
+        $processes | Select-Object Id, ProcessName, MainWindowTitle, CPU, WS | Format-Table -AutoSize
     }
 }
 
 # Main
 Write-Header
 
-$PythonDir = Join-Path $ProjectRoot "src_python"
-$FrontendDir = Join-Path $ProjectRoot "src-frontend"
 $TauriDir = Join-Path $ProjectRoot "src-tauri"
 
-# Validate directories
-foreach ($dir in @($PythonDir, $FrontendDir, $TauriDir)) {
-    if (-not (Test-Path $dir)) {
-        Write-Error "Directory not found: $dir"
-        exit 1
-    }
+# Validate directory
+if (-not (Test-Path $TauriDir)) {
+    Write-Error "Tauri directory not found: $TauriDir"
+    exit 1
 }
 
 if (-not (Test-Path (Join-Path $ProjectRoot ".env"))) {
@@ -207,65 +103,63 @@ if (-not (Test-Path (Join-Path $ProjectRoot ".env"))) {
     Write-Host ""
 }
 
-# Clean up any existing processes first
-Cleanup-ExistingProcesses
-
-Write-Host "Starting JARVIS Assistant services..." -ForegroundColor Green
-Write-Host ""
-
-# Clear PID file
-New-Item -Path $script:pidFile -ItemType File -Force | Out-Null
-
-# 1. Python Backend
-$pythonProcess = Start-Service -Name "Python Backend" -WorkingDir $PythonDir `
-    -Command "$PythonDir\.venv\Scripts\python.exe" -Args @("main.py")
-$env:PYTHONPATH = "$ProjectRoot\src_python"
-Start-Sleep -Seconds 3
-
-# 2. Frontend Dev Server
-$frontendProcess = Start-Service -Name "Frontend" -WorkingDir $FrontendDir `
-    -Command "npm" -Args @("run", "dev")
-Start-Sleep -Seconds 5
-
-# 3. Tauri App
-$tauriProcess = Start-Service -Name "Tauri App" -WorkingDir $TauriDir `
-    -Command "npx" -Args @("tauri", "dev")
-
-Write-Host ""
-Write-Host "==========================================" -ForegroundColor Cyan
-Write-Host "All services started!" -ForegroundColor Green
-Write-Host "==========================================" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "Python Backend:  http://127.0.0.1:8765" -ForegroundColor Cyan
-Write-Host "Frontend Dev:    http://localhost:5173" -ForegroundColor Cyan
-Write-Host "Tauri App:       Native desktop window" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "PID file: $script:pidFile" -ForegroundColor Gray
-Write-Host "Press Ctrl+C to stop all services cleanly." -ForegroundColor Yellow
-Write-Host ""
-
-# Monitor processes and keep script alive
-try {
-    while ($true) {
-        Start-Sleep -Seconds 5
-        
-        # Check for failed processes
-        foreach ($entry in $script:jarvisProcesses) {
-            if ($entry.Process.HasExited) {
-                $exitCode = $entry.Process.ExitCode
-                if ($exitCode -ne 0) {
-                    Write-Error "[$($entry.Name)] Process exited with code $exitCode"
-                    if ($script:jarvisError.Length -gt 0) {
-                        Write-Host $script:jarvisError.ToString() -ForegroundColor Red
-                    }
-                }
-            }
-        }
+switch ($Action) {
+    "stop" {
+        Write-Host "Stopping JARVIS Assistant..." -ForegroundColor Yellow
+        Cleanup-ExistingProcesses
+        Write-Host "All JARVIS processes stopped." -ForegroundColor Green
+        break
+    }
+    "restart" {
+        Write-Host "Restarting JARVIS Assistant..." -ForegroundColor Yellow
+        Cleanup-ExistingProcesses
+        Start-Sleep -Seconds 2
+        # Fall through to start
+    }
+    "status" {
+        Show-Status
+        break
+    }
+    "start" {
+        # Continue to start
+    }
+    default {
+        Write-Error "Unknown action: $Action"
+        exit 1
     }
 }
-catch {
-    Write-Error "Launcher error: $_"
-}
-finally {
-    Invoke-Cleanup
+
+if ($Action -ne "status" -and $Action -ne "stop") {
+    # Start action
+    if (-not (Test-Path (Join-Path $ProjectRoot ".env"))) {
+        Write-Warning ".env file not found. Copy .env.example to .env and configure API keys."
+        Write-Host ""
+    }
+
+    # Clean up any existing processes first
+    Cleanup-ExistingProcesses
+
+    Write-Host "Starting JARVIS Assistant (Tauri Native App)..." -ForegroundColor Green
+    Write-Host ""
+
+    # Check .env
+    if (-not (Test-Path (Join-Path $ProjectRoot ".env"))) {
+        Write-Warning ".env file not found. Copy .env.example to .env and configure API keys."
+        Write-Host ""
+    }
+
+    # Start Tauri App - this manages Python sidecar internally
+    Write-Host "[Tauri App] Starting..." -ForegroundColor Yellow
+    Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "cd /d `"$TauriDir`" && npx tauri dev" -WindowStyle Normal
+
+    Write-Host ""
+    Write-Host "==========================================" -ForegroundColor Cyan
+    Write-Host "JARVIS Assistant started!" -ForegroundColor Green
+    Write-Host "==========================================" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Native desktop window should open shortly." -ForegroundColor Cyan
+    Write-Host "Close the window to stop the application." -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Press any key to exit this launcher (app will keep running)..." -ForegroundColor Yellow
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }

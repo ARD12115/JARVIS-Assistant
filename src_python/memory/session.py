@@ -101,7 +101,7 @@ class SessionMemory:
             cursor = conn.execute("""
                 SELECT role, content, tool_calls
                 FROM conversations
-                WHERE session_id = ?
+                WHERE session_id = ? AND turn_index >= 0
                 ORDER BY turn_index DESC
                 LIMIT ?
             """, (session_id, limit))
@@ -171,7 +171,26 @@ class SessionMemory:
         return self.session_id
 
     def new_session(self) -> str:
+        """Create a new session and insert a placeholder record."""
         self.session_id = str(uuid.uuid4())
+        # Insert a placeholder system message so the session appears in the list immediately
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            conn.execute("""
+                INSERT INTO conversations 
+                (session_id, turn_index, role, content, tool_calls, tool_results, latency_ms, backend_used)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                self.session_id,
+                -1,  # Special index for session placeholder
+                "system",
+                "Session created",
+                "[]",
+                "[]",
+                None,
+                None
+            ))
+            conn.commit()
         return self.session_id
 
     def list_sessions(self) -> List[SessionSummary]:
@@ -188,10 +207,12 @@ class SessionMemory:
                         FROM conversations AS latest
                         WHERE latest.session_id = c.session_id
                           AND latest.role = 'user'
+                          AND latest.turn_index >= 0
                         ORDER BY latest.turn_index DESC
                         LIMIT 1
                     ) as last_user_msg
                 FROM conversations AS c
+                WHERE c.turn_index >= 0
                 GROUP BY c.session_id
                 ORDER BY started_at DESC
             """)
