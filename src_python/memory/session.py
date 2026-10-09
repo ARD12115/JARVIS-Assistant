@@ -127,7 +127,7 @@ class SessionMemory:
             cursor = conn.execute("""
                 SELECT role, content, tool_calls
                 FROM conversations
-                WHERE session_id = ? AND content LIKE ?
+                WHERE session_id = ? AND content LIKE ? AND turn_index >= 0
                 ORDER BY turn_index DESC
                 LIMIT ?
             """, (self.session_id, f"%{query}%", limit))
@@ -201,7 +201,7 @@ class SessionMemory:
                 SELECT 
                     c.session_id,
                     MIN(created_at) as started_at,
-                    COUNT(*) as turn_count,
+                    SUM(CASE WHEN c.turn_index >= 0 THEN 1 ELSE 0 END) as turn_count,
                     (
                         SELECT content
                         FROM conversations AS latest
@@ -212,7 +212,6 @@ class SessionMemory:
                         LIMIT 1
                     ) as last_user_msg
                 FROM conversations AS c
-                WHERE c.turn_index >= 0
                 GROUP BY c.session_id
                 ORDER BY started_at DESC
             """)

@@ -74,9 +74,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "microphone=(), camera=(), geolocation=()"
-        # Remove server header
-        if "server" in response.headers:
-            del response.headers["server"]
+        # Remove server header - uvicorn adds this after middleware
+        response.headers["Server"] = ""
         return response
 
 

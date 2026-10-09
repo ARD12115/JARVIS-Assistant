@@ -103,6 +103,7 @@ export function ChatWindow({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const unlistenRef = useRef<(() => void) | null>(null)
   const messagesRef = useRef(messages)
+  const cleanupDoneRef = useRef(false)
 
   // Keep messagesRef current
   messagesRef.current = messages
@@ -116,6 +117,8 @@ export function ChatWindow({
       const { listen } = await import('@tauri-apps/api/event')
       unlisten = await listen<ChatStreamChunk>('chat-stream', (event) => {
         const chunk = event.payload
+        
+        // Use functional update to get latest state
         const currentMessages = messagesRef.current
         const lastMsg = currentMessages[currentMessages.length - 1]
         if (lastMsg && lastMsg.role === 'assistant' && lastMsg.isStreaming) {
@@ -131,10 +134,23 @@ export function ChatWindow({
           }
         }
       })
-      unlistenRef.current = unlisten
+      
+      // If cleanup already happened, call unlisten immediately
+      if (cleanupDoneRef.current && unlisten) {
+        unlisten()
+      } else {
+        unlistenRef.current = unlisten
+      }
     }
     setupListener()
-    return () => { unlistenRef.current?.() }
+    
+    return () => { 
+      cleanupDoneRef.current = true
+      if (unlistenRef.current) {
+        unlistenRef.current()
+        unlistenRef.current = null
+      }
+    }
   }, [isTauri, updateMessage, setIsStreaming])
 
   // Auto-scroll

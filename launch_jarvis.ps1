@@ -33,28 +33,19 @@ function Cleanup-ExistingProcesses {
         $processIds = netstat -ano | Select-String ":$port\s" | ForEach-Object {
             ($_ -split '\s+')[-1]
         } | Sort-Object -Unique
-        foreach ($pid in $processIds) {
-            if ($pid -and $pid -ne "0") {
-                try { Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue } catch {}
+        foreach ($procId in $processIds) {
+            if ($procId -and $procId -ne "0") {
+                try { Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue } catch {}
             }
         }
     }
     
-    # Kill by window title
-    $titles = @("JARVIS*")
-    foreach ($title in $titles) {
-        $processes = Get-Process | Where-Object { $_.MainWindowTitle -like $title }
-        foreach ($proc in $processes) {
-            try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
-        }
-    }
-    
-    # Kill by process name
+    # Kill by process name only (removed window title matching)
     $processNames = @("jarvis-assistant", "python", "node")
     foreach ($name in $processNames) {
         $procs = Get-Process -Name $name -ErrorAction SilentlyContinue
         foreach ($proc in $procs) {
-            if ($proc.MainWindowTitle -like "*JARVIS*" -or $proc.Path -like "*JARVIS*") {
+            if ($proc.Path -like "*JARVIS*") {
                 try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
             }
         }
@@ -72,9 +63,9 @@ function Show-Status {
         $processIds = netstat -ano | Select-String ":$port\s" | ForEach-Object {
             ($_ -split '\s+')[-1]
         } | Sort-Object -Unique
-        foreach ($pid in $processIds) {
-            if ($pid -and $pid -ne "0") {
-                Write-Host "Port $port: PID $pid RUNNING" -ForegroundColor Green
+        foreach ($procId in $processIds) {
+            if ($procId -and $procId -ne "0") {
+                Write-Host "Port ${port}: PID $procId RUNNING" -ForegroundColor Green
             }
         }
     }
@@ -131,18 +122,13 @@ switch ($Action) {
 
 if ($Action -ne "status" -and $Action -ne "stop") {
     # Start action
-    if (-not (Test-Path (Join-Path $ProjectRoot ".env"))) {
-        Write-Warning ".env file not found. Copy .env.example to .env and configure API keys."
-        Write-Host ""
-    }
-
     # Clean up any existing processes first
     Cleanup-ExistingProcesses
 
     Write-Host "Starting JARVIS Assistant (Tauri Native App)..." -ForegroundColor Green
     Write-Host ""
 
-    # Check .env
+    # Check .env (only once)
     if (-not (Test-Path (Join-Path $ProjectRoot ".env"))) {
         Write-Warning ".env file not found. Copy .env.example to .env and configure API keys."
         Write-Host ""

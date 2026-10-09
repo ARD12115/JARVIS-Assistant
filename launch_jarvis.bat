@@ -45,10 +45,7 @@ echo Starting JARVIS Assistant (Tauri Native App)...
 echo.
 
 REM Start Tauri App - this manages Python sidecar internally
-start "JARVIS Assistant" cmd /k "
-    cd /d %TAURI_DIR%
-    npx tauri dev
-"
+start "JARVIS Assistant" cmd /k "cd /d %TAURI_DIR% && npx tauri dev"
 
 echo.
 echo ==========================================
@@ -84,12 +81,14 @@ goto :start
 :status
 echo Checking JARVIS processes...
 echo.
-for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8765 :5173"') do (
-    if "%%p" NEQ "0" (
-        echo Port %%p: PID %%p RUNNING
+for /f "tokens=2,5" %%a in ('netstat -ano ^| findstr ":8765 :5173"') do (
+    if "%%b" NEQ "0" (
+        echo Port %%a: PID %%b RUNNING
     )
 )
-tasklist /FI "IMAGENAME eq jarvis-assistant.exe" /FI "IMAGENAME eq python.exe" /FI "IMAGENAME eq node.exe" /FO TABLE
+tasklist /FI "IMAGENAME eq jarvis-assistant.exe" /FO TABLE
+tasklist /FI "IMAGENAME eq python.exe" /FO TABLE
+tasklist /FI "IMAGENAME eq node.exe" /FO TABLE
 echo.
 pause
 goto :eof
@@ -99,9 +98,9 @@ REM Kill any existing processes on our ports
 for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8765 :5173"') do (
     if "%%p" NEQ "0" taskkill /F /PID %%p >nul 2>&1
 )
-REM Kill any existing JARVIS windows
-taskkill /F /FI "WINDOWTITLE eq JARVIS*" >nul 2>&1
+REM Kill any existing JARVIS windows - exact title match
+taskkill /F /FI "WINDOWTITLE eq JARVIS Assistant" >nul 2>&1
 taskkill /F /FI "IMAGENAME eq jarvis-assistant.exe" >nul 2>&1
-taskkill /F /FI "IMAGENAME eq python.exe" /FI "WINDOWTITLE eq JARVIS*" >nul 2>&1
-taskkill /F /FI "IMAGENAME eq node.exe" /FI "WINDOWTITLE eq JARVIS*" >nul 2>&1
+taskkill /F /FI "IMAGENAME eq python.exe" /FI "WINDOWTITLE eq JARVIS Assistant" >nul 2>&1
+taskkill /F /FI "IMAGENAME eq node.exe" /FI "WINDOWTITLE eq JARVIS Assistant" >nul 2>&1
 goto :eof
